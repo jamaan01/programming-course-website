@@ -2,9 +2,14 @@ package userCore
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var ErrUserNotFound = errors.New("user not found")
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, user UserDB) (int, error)
@@ -21,6 +26,59 @@ func NewUserRepository(db *pgxpool.Pool) UserRepository {
 	return &userRepo{db: db}
 }
 
-func (r *userRepo) CreateUser(сtx context.Context, user UserDB) (int, error) {
+func (r *userRepo) CreateUser(ctx context.Context, user UserDB) (int, error) {
+	var id int
+	query := `
+		INSERT INTO users (name, email, password_hash)
+		VALUES ($1, $2, $3)
+		RETURNING id
+		`
 
+	err := r.db.QueryRow(ctx, query, user.Name, user.Email, user.PasswordHash).Scan(&id)
+	if err != nil {
+		slog.Error("Failed create user", "error", err)
+		return 0, err
+	}
+
+	return id, nil
+}
+
+func (r *userRepo) GetUserByEmail(ctx context.Context, email string) (*UserDB, error) {
+	var user UserDB
+	query := `
+		SELECT id, name, email, password_hash, created_at
+    FROM users
+    WHERE email = $1
+	`
+	err := r.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		slog.Error("Database error", "error", err)
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepo) GetUserByID(ctx context.Context, id int) (*UserDB, error) {
+	var user UserDB
+	query := `
+		SELECT id, name, email, password_hash, created_at
+		FROM users
+		WHERE id = $1
+	`
+	err := r.db.QueryRow(ctx, query, id).Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		slog.Error("Database error", "error", err)
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepo) UpdateUser(ctx context.Context, user UserDB) error {
+	return nil
 }
