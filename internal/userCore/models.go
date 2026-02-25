@@ -20,4 +20,15 @@ type UserResponse struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
+	Token string `json:"jwt,omitempty"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+type UpdateProfileRequest struct {
+	Name  string `json:"name" binding:"required,min=2,max=50"`
+	Email string `json:"email" binding:"required,email"`
 }

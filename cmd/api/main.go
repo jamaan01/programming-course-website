@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jamaan01/kursovaia/internal/db"
 	"github.com/jamaan01/kursovaia/internal/handlers"
+	"github.com/jamaan01/kursovaia/internal/middlewear"
 	"github.com/jamaan01/kursovaia/internal/userCore"
 )
 
@@ -22,6 +23,14 @@ func main() {
 	authGroup := r.Group("/auth")
 	{
 		authGroup.POST("/register", userHandler.Register)
+		authGroup.POST("/login", userHandler.Login)
+	}
+
+	apiGroup := r.Group("/api")
+	apiGroup.Use(middlewear.AuthMiddle())
+	{
+		apiGroup.GET("/profile", userHandler.GetProfile)
+		apiGroup.PUT("/profile", userHandler.UpdateProfile)
 	}
 	err := r.Run(":8080")
 	if err != nil {

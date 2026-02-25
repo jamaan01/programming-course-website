@@ -80,5 +80,20 @@ func (r *userRepo) GetUserByID(ctx context.Context, id int) (*UserDB, error) {
 }
 
 func (r *userRepo) UpdateUser(ctx context.Context, user UserDB) error {
+	query := `
+	UPDATE users
+	SET name = $1, email = $2
+	WHERE id = $3
+	`
+
+	commandTag, err := r.db.Exec(ctx, query, user.Name, user.Email, user.ID)
+	if err != nil {
+		slog.Error("Failed to update user", "error", err)
+		return err
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
 	return nil
 }
