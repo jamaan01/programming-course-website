@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jamaan01/kursovaia/internal/courseCore"
 	"github.com/jamaan01/kursovaia/internal/db"
 	"github.com/jamaan01/kursovaia/internal/handlers"
 	"github.com/jamaan01/kursovaia/internal/middlewear"
@@ -18,12 +19,23 @@ func main() {
 	userService := userCore.NewUserService(userRepo)
 	userHandler := handlers.NewAuthHandler(userService)
 
+	courseRepo := courseCore.NewRepository(db.Pool)
+	courseService := courseCore.NewService(courseRepo)
+	courseHandler := handlers.NewCourseHandler(courseService)
+
 	r := gin.Default()
 
 	authGroup := r.Group("/auth")
 	{
 		authGroup.POST("/register", userHandler.Register)
 		authGroup.POST("/login", userHandler.Login)
+	}
+
+	publicApiGroup := r.Group("/api")
+	{
+		publicApiGroup.GET("/courses", courseHandler.GetAllCourses)
+		publicApiGroup.GET("/courses/:id", courseHandler.GetCourseByID)
+		publicApiGroup.GET("/courses/:id/syllabus", courseHandler.GetCourseSyllabus)
 	}
 
 	apiGroup := r.Group("/api")

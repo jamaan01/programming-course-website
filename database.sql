@@ -29,3 +29,30 @@ VALUES
 (1, 'Основи', 'Урок 1: Що таке програмування', 'Текст першого уроку...', 'Завдання 1', 1),
 (1, 'Основи', 'Урок 2: Перша програма', 'Текст другого уроку...', 'Завдання 2', 2),
 (1, 'Типи даних', 'Урок 3: Числа та рядки', 'Текст третього уроку...', 'Завдання 3', 3);
+
+
+CREATE TABLE modules (
+    id SERIAL PRIMARY KEY,
+    course_id INT REFERENCES courses(id) ON DELETE CASCADE, 
+    title VARCHAR(255) NOT NULL,
+    order_num INT 
+);
+
+CREATE TABLE lessons (
+    id SERIAL PRIMARY KEY,
+    module_id INT REFERENCES modules(id) ON DELETE CASCADE, 
+    title VARCHAR(255) NOT NULL,
+    content TEXT, 
+    video_url VARCHAR(255), 
+    order_num INT 
+);
+
+
+INSERT INTO modules (course_id, title, order_num) VALUES 
+(1, 'Модуль 1: Основи мови Go', 1),
+(1, 'Модуль 2: Робота з базами даних', 2);
+
+
+INSERT INTO lessons (module_id, title, content, order_num) VALUES 
+(1, 'Що таке Go і чому він такий крутий?', 'Текст про історію Go та його переваги...', 1),
+(1, 'Змінні та типи даних', 'Текст про var, int, string, bool...', 2);
