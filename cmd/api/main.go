@@ -8,6 +8,7 @@ import (
 	"github.com/jamaan01/kursovaia/internal/courseCore"
 	"github.com/jamaan01/kursovaia/internal/db"
 	"github.com/jamaan01/kursovaia/internal/handlers"
+	"github.com/jamaan01/kursovaia/internal/lessonCore"
 	"github.com/jamaan01/kursovaia/internal/middlewear"
 	"github.com/jamaan01/kursovaia/internal/userCore"
 )
@@ -23,6 +24,10 @@ func main() {
 	courseService := courseCore.NewService(courseRepo)
 	courseHandler := handlers.NewCourseHandler(courseService)
 
+	lessonRepo := lessonCore.NewRepository(db.Pool)
+	lessonService := lessonCore.NewService(lessonRepo)
+	lessonHandler := handlers.NewLessonHandler(lessonService)
+
 	r := gin.Default()
 
 	authGroup := r.Group("/auth")
@@ -36,6 +41,8 @@ func main() {
 		publicApiGroup.GET("/courses", courseHandler.GetAllCourses)
 		publicApiGroup.GET("/courses/:id", courseHandler.GetCourseByID)
 		publicApiGroup.GET("/courses/:id/syllabus", courseHandler.GetCourseSyllabus)
+
+		publicApiGroup.GET("/lessons/:id", lessonHandler.GetLessonByID)
 	}
 
 	apiGroup := r.Group("/api")
