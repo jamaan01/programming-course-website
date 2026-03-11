@@ -41,8 +41,6 @@ func main() {
 		publicApiGroup.GET("/courses", courseHandler.GetAllCourses)
 		publicApiGroup.GET("/courses/:id", courseHandler.GetCourseByID)
 		publicApiGroup.GET("/courses/:id/syllabus", courseHandler.GetCourseSyllabus)
-
-		publicApiGroup.GET("/lessons/:id", lessonHandler.GetLessonByID)
 	}
 
 	apiGroup := r.Group("/api")
@@ -50,6 +48,7 @@ func main() {
 	{
 		apiGroup.GET("/profile", userHandler.GetProfile)
 		apiGroup.PUT("/profile", userHandler.UpdateProfile)
+		apiGroup.GET("/lessons/:id", lessonHandler.GetLessonByID)
 	}
 	err := r.Run(":8080")
 	if err != nil {

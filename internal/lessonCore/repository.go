@@ -10,6 +10,7 @@ import (
 
 type LessonRepository interface {
 	GetLessonByID(ctx context.Context, id int) (Lesson, error)
+	CheckAccess(ctx context.Context, userID int, lessonID int) error
 }
 
 type Repository struct {
@@ -31,4 +32,30 @@ func (r *Repository) GetLessonByID(ctx context.Context, id int) (Lesson, error) 
 	}
 
 	return l, nil
+}
+
+func (r *Repository) CheckAccess(ctx context.Context, userID int, lessonID int) error {
+	var hasAccess bool
+
+	query := `
+	SELECT EXISTS (
+	SELECT 1
+	FROM lessons l
+	JOIN modules m ON l.module_id = m.id
+	JOIN enrollments e ON m.course_id = e.course_id
+	WHERE l.id = $1 AND e.user_id = $2
+	)
+	`
+
+	err := r.db.QueryRow(ctx, query, lessonID, userID).Scan(&hasAccess)
+	if err != nil {
+		slog.Error("Check access error", "error", err)
+		return fmt.Errorf("помилка бази даних при перевірці доступу: %w", err)
+	}
+
+	if !hasAccess {
+		return fmt.Errorf("доступ заборонено: ви не придбали цей курс")
+	}
+
+	return nil
 }

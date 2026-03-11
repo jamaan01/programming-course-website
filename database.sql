@@ -56,3 +56,10 @@ INSERT INTO modules (course_id, title, order_num) VALUES
 INSERT INTO lessons (module_id, title, content, order_num) VALUES 
 (1, 'Що таке Go і чому він такий крутий?', 'Текст про історію Go та його переваги...', 1),
 (1, 'Змінні та типи даних', 'Текст про var, int, string, bool...', 2);
+
+CREATE TABLE enrollments (
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, course_id)
+);
