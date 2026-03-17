@@ -7,6 +7,7 @@ type CourseService interface {
 	GetCourseByID(ctx context.Context, id int) (Course, error)
 	GetCourseSyllabus(ctx context.Context, id int) (Course, error)
 	EnrollUser(ctx context.Context, userID int, courseID int) error
+	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
 }
 
 type Service struct {
@@ -31,4 +32,8 @@ func (s *Service) GetCourseSyllabus(ctx context.Context, id int) (Course, error)
 
 func (s *Service) EnrollUser(ctx context.Context, userID int, courseID int) error {
 	return s.repo.EnrollUser(ctx, userID, courseID)
+}
+
+func (s *Service) GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error) {
+	return s.repo.GetCoursesByUserID(ctx, userID)
 }

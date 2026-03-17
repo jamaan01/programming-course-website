@@ -50,6 +50,7 @@ func main() {
 		apiGroup.PUT("/profile", userHandler.UpdateProfile)
 		apiGroup.GET("/lessons/:id", lessonHandler.GetLessonByID)
 		apiGroup.POST("/courses/:id/enroll", courseHandler.EnrollUser)
+		apiGroup.GET("/profile/courses", courseHandler.GetMyCourse)
 	}
 	err := r.Run(":8080")
 	if err != nil {

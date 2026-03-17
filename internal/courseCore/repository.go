@@ -14,6 +14,7 @@ type CourseRepository interface {
 	GetCourseByID(ctx context.Context, id int) (Course, error)
 	GetCourseSyllabus(ctx context.Context, id int) (Course, error)
 	EnrollUser(ctx context.Context, userID int, courseID int) error
+	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
 }
 
 type Repository struct {
@@ -126,4 +127,40 @@ func (r *Repository) EnrollUser(ctx context.Context, userID int, courseID int) e
 	}
 
 	return nil
+}
+
+func (r *Repository) GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error) {
+	query := `
+	SELECT c.id, c.title, c.description
+	FROM courses c
+	JOIN enrollments e ON c.id = e.course_id
+	WHERE e.user_id = $1
+	`
+
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		slog.Error("GetCoursesByUserID query error", "error", err)
+		return nil, fmt.Errorf("помилка бази даних при отриманні курсів: %w", err)
+	}
+	defer rows.Close()
+
+	var courses []Course
+
+	for rows.Next() {
+		var course Course
+
+		err := rows.Scan(&course.ID, &course.Title, &course.Description)
+		if err != nil {
+			slog.Error("GetCoursesByUserID scan error", "error", err)
+			return nil, fmt.Errorf("помилка при читанні даних курсу: %w", err)
+		}
+
+		courses = append(courses, course)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("помилка при обробці списку курсів: %w", err)
+	}
+
+	return courses, nil
 }

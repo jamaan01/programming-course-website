@@ -96,3 +96,25 @@ func (h *CourseHandler) EnrollUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Курс успішно додано!"})
 }
+
+func (h *CourseHandler) GetMyCourse(c *gin.Context) {
+	userIDcontext, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Не авторизовано"})
+		return
+	}
+
+	userID, ok := userIDcontext.(int)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Помилка сервера: невірний тип ID"})
+		return
+	}
+
+	courses, err := h.service.GetCoursesByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Помилка при отриманні списку курсів"})
+		return
+	}
+
+	c.JSON(http.StatusOK, courses)
+}
