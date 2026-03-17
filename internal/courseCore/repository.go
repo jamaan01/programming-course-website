@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -12,6 +13,7 @@ type CourseRepository interface {
 	GetAllCourses(ctx context.Context) ([]Course, error)
 	GetCourseByID(ctx context.Context, id int) (Course, error)
 	GetCourseSyllabus(ctx context.Context, id int) (Course, error)
+	EnrollUser(ctx context.Context, userID int, courseID int) error
 }
 
 type Repository struct {
@@ -109,4 +111,19 @@ func (r *Repository) GetCourseSyllabus(ctx context.Context, id int) (Course, err
 	}
 
 	return c, nil
+}
+
+func (r *Repository) EnrollUser(ctx context.Context, userID int, courseID int) error {
+	query := `INSERT INTO enrollments (user_id, course_id) VALUES ($1, $2)`
+
+	_, err := r.db.Exec(ctx, query, userID, courseID)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
+			return fmt.Errorf("ви вже отримали доступ до цього курсу")
+		}
+		slog.Error("EnrollUser error", "error", err)
+		return fmt.Errorf("помилка бази даних при записі на курс: %w", err)
+	}
+
+	return nil
 }

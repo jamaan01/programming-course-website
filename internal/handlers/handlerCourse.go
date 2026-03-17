@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jamaan01/kursovaia/internal/courseCore"
@@ -60,4 +61,38 @@ func (h *CourseHandler) GetCourseSyllabus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, syllabus)
+}
+
+func (h *CourseHandler) EnrollUser(c *gin.Context) {
+	idStr := c.Param("id")
+	courseID, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неправильний формат ID курсу"})
+		return
+	}
+
+	userIDcontext, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Не авторизовано"})
+		return
+	}
+
+	userID, ok := userIDcontext.(int)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Помилка сервера: невірний тип ID"})
+		return
+	}
+
+	err = h.service.EnrollUser(c.Request.Context(), userID, courseID)
+	if err != nil {
+		if strings.Contains(err.Error(), "вже отримали") {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Внутрішня помилка сервера"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Курс успішно додано!"})
 }
