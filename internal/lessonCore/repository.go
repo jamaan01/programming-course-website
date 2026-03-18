@@ -11,6 +11,7 @@ import (
 type LessonRepository interface {
 	GetLessonByID(ctx context.Context, id int) (Lesson, error)
 	CheckAccess(ctx context.Context, userID int, lessonID int) error
+	UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error
 }
 
 type Repository struct {
@@ -55,6 +56,25 @@ func (r *Repository) CheckAccess(ctx context.Context, userID int, lessonID int) 
 
 	if !hasAccess {
 		return fmt.Errorf("доступ заборонено: ви не придбали цей курс")
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error {
+	query := `
+		INSERT INTO lesson_progress (user_id, lesson_id, is_completed)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, lesson_id)
+		DO UPDATE SET
+			is_completed = EXCLUDED.is_completed, 
+			completed_at = CURRENT_TIMESTAMP
+	`
+
+	_, err := r.db.Exec(ctx, query, userID, lessonID, isCompleted)
+	if err != nil {
+		slog.Error("UpdateLessonProgress error", "error", err)
+		return fmt.Errorf("помилка бази даних при збереженні прогресу: %w", err)
 	}
 
 	return nil

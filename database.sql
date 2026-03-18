@@ -63,3 +63,12 @@ CREATE TABLE enrollments (
     enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, course_id)
 );
+
+CREATE TABLE lesson_progress (
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id INT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    is_completed BOOLEAN DEFAULT false, 
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    
+    PRIMARY KEY (user_id, lesson_id)
+);

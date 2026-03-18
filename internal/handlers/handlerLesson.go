@@ -52,3 +52,44 @@ func (h *LessonHandler) GetLessonByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, lesson)
 }
+
+type ProgressInput struct {
+	Completed bool `json:"completed"`
+}
+
+func (h *LessonHandler) CompleteLesson(c *gin.Context) {
+	idStr := c.Param("id")
+	lessonID, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неправильний формат ID уроку"})
+		return
+	}
+
+	userIDcontext, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Не авторизовано"})
+		return
+	}
+
+	userID, ok := userIDcontext.(int)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Помилка сервера: невірний тип ID"})
+		return
+	}
+
+	var input ProgressInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних. Очікується {'completed': true/false}"})
+		return
+	}
+
+	err = h.service.UpdateLessonProgress(c.Request.Context(), userID, lessonID, input.Completed)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося зберегти прогрес"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Статус уроку оновлено",
+		"is_completed": input.Completed,
+	})
+}

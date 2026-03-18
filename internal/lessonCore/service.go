@@ -7,6 +7,7 @@ import (
 
 type LessonService interface {
 	GetLessonByID(ctx context.Context, lessonID int, userID int) (Lesson, error)
+	UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error
 }
 
 type Service struct {
@@ -25,4 +26,8 @@ func (s *Service) GetLessonByID(ctx context.Context, lessonID int, userID int) (
 	}
 
 	return s.repo.GetLessonByID(ctx, lessonID)
+}
+
+func (s *Service) UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error {
+	return s.repo.UpdateLessonProgress(ctx, userID, lessonID, isCompleted)
 }
