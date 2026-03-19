@@ -93,3 +93,32 @@ func (h *LessonHandler) CompleteLesson(c *gin.Context) {
 		"is_completed": input.Completed,
 	})
 }
+
+func (h *LessonHandler) GetLessonProgress(c *gin.Context) {
+	idStr := c.Param("id")
+	courseID, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неправильний формат ID курсу"})
+		return
+	}
+
+	userIDcontext, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Не авторизовано"})
+		return
+	}
+
+	userID, ok := userIDcontext.(int)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Помилка сервера: невірний тип ID"})
+		return
+	}
+
+	completedIDs, err := h.service.GetCompleteLesson(c.Request.Context(), userID, courseID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося отримати прогрес"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"completed_lesson_ids": completedIDs})
+}

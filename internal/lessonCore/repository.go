@@ -12,6 +12,7 @@ type LessonRepository interface {
 	GetLessonByID(ctx context.Context, id int) (Lesson, error)
 	CheckAccess(ctx context.Context, userID int, lessonID int) error
 	UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error
+	GetCompletedLesson(ctx context.Context, userID int, courseID int) ([]int, error)
 }
 
 type Repository struct {
@@ -78,4 +79,36 @@ func (r *Repository) UpdateLessonProgress(ctx context.Context, userID int, lesso
 	}
 
 	return nil
+}
+
+func (r *Repository) GetCompletedLesson(ctx context.Context, userID int, courseID int) ([]int, error) {
+	query := `
+		SELECT lp.lesson_id
+		FROM lesson_progress lp
+		JOIN lessons l ON lp.lesson_id = l.id
+		JOIN modules m ON l.module_id = m.id
+		WHERE lp.user_id = $1 AND m.course_id = $2 AND lp.is_completed = true
+	`
+
+	rows, err := r.db.Query(ctx, query, userID, courseID)
+	if err != nil {
+		slog.Error("GetCompletedLessons query error", "error", err)
+		return nil, fmt.Errorf("помилка отримання прогресу: %w", err)
+	}
+	defer rows.Close()
+
+	var completedIDs []int
+	for rows.Next() {
+		var lessonID int
+		if err := rows.Scan(&lessonID); err != nil {
+			slog.Error("GetCompletedLessons scan error", "error", err)
+			return nil, fmt.Errorf("помилка читання прогресу: %w", err)
+		}
+		completedIDs = append(completedIDs, lessonID)
+	}
+
+	if completedIDs == nil {
+		completedIDs = []int{}
+	}
+	return completedIDs, nil
 }

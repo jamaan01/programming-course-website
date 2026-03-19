@@ -64,7 +64,6 @@ func (r *Repository) GetCourseByID(ctx context.Context, id int) (Course, error) 
 
 func (r *Repository) GetCourseSyllabus(ctx context.Context, id int) (Course, error) {
 	var c Course
-
 	queryCourse := `SELECT id, title, description FROM courses WHERE id = $1`
 	err := r.db.QueryRow(ctx, queryCourse, id).Scan(&c.ID, &c.Title, &c.Description)
 	if err != nil {
@@ -82,6 +81,7 @@ func (r *Repository) GetCourseSyllabus(ctx context.Context, id int) (Course, err
 
 	for moduleRows.Next() {
 		var m Module
+
 		err := moduleRows.Scan(&m.ID, &m.CourseID, &m.Title, &m.OrderNum)
 		if err != nil {
 			slog.Error("Module get error", "error", err)
@@ -103,14 +103,11 @@ func (r *Repository) GetCourseSyllabus(ctx context.Context, id int) (Course, err
 				slog.Error("Lessons get error", "error", err)
 				return Course{}, fmt.Errorf("помилка отримання уроків: %w", err)
 			}
-
 			m.Lessons = append(m.Lessons, l)
 		}
 		lessonRows.Close()
-
 		c.Modules = append(c.Modules, m)
 	}
-
 	return c, nil
 }
 
