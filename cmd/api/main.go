@@ -53,6 +53,14 @@ func main() {
 		apiGroup.GET("/profile/courses", courseHandler.GetMyCourse)
 		apiGroup.POST("/lessons/:id/complete", lessonHandler.CompleteLesson)
 		apiGroup.GET("/courses/:id/progress", lessonHandler.GetLessonProgress)
+
+		adminGroup := apiGroup.Group("/admin")
+		adminGroup.Use(middlewear.AdminMiddle())
+		{
+			adminGroup.POST("/courses", courseHandler.CreateCourse)
+			adminGroup.POST("/courses/:id/modules", courseHandler.CreateModule)
+			adminGroup.POST("/modules/:id/lessons", courseHandler.CreateLesson)
+		}
 	}
 	err := r.Run(":8080")
 	if err != nil {

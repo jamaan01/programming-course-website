@@ -72,3 +72,6 @@ CREATE TABLE lesson_progress (
     
     PRIMARY KEY (user_id, lesson_id)
 );
+
+ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user';
+

@@ -52,7 +52,7 @@ func (s *userService) Register(ctx context.Context, req RegisterRequest) (string
 		return "", 0, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	token, err := utils.GenerateToken(id)
+	token, err := utils.GenerateToken(id, "user")
 	if err != nil {
 		slog.Error("Failed to generate token", "error", err)
 		return "", 0, fmt.Errorf("помилка створення токена")
@@ -76,7 +76,7 @@ func (s *userService) Login(ctx context.Context, req LoginRequest) (string, erro
 		return "", ErrInvalidCredentials
 	}
 
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		slog.Error("Failed to generate token", "error", err)
 		return "", fmt.Errorf("помилка створення токена")

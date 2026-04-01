@@ -8,6 +8,9 @@ type CourseService interface {
 	GetCourseSyllabus(ctx context.Context, id int) (Course, error)
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
+	CreateCourse(ctx context.Context, req CreateCourseRequest) (int, error)
+	CreateModule(ctx context.Context, courseID int, req CreateModuleRequest) (int, error)
+	CreateLesson(ctx context.Context, moduleID int, req CreateLessonRequest) (int, error)
 }
 
 type Service struct {
@@ -36,4 +39,16 @@ func (s *Service) EnrollUser(ctx context.Context, userID int, courseID int) erro
 
 func (s *Service) GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error) {
 	return s.repo.GetCoursesByUserID(ctx, userID)
+}
+
+func (s *Service) CreateCourse(ctx context.Context, req CreateCourseRequest) (int, error) {
+	return s.repo.CreateCourse(ctx, req.Title, req.Description)
+}
+
+func (s *Service) CreateModule(ctx context.Context, courseID int, req CreateModuleRequest) (int, error) {
+	return s.repo.CreateModule(ctx, courseID, req.Title, req.OrderNum)
+}
+
+func (s *Service) CreateLesson(ctx context.Context, moduleID int, req CreateLessonRequest) (int, error) {
+	return s.repo.CreateLesson(ctx, moduleID, req.Title, req.Content, req.OrderNum)
 }

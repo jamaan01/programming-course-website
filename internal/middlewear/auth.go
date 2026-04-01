@@ -44,6 +44,12 @@ func AuthMiddle() gin.HandlerFunc {
 
 				c.Set("userID", userID)
 
+				if role, ok := claims["role"].(string); ok {
+					c.Set("userRole", role)
+				} else {
+					c.Set("userRole", "user")
+				}
+
 				c.Next()
 				return
 			}
@@ -51,5 +57,28 @@ func AuthMiddle() gin.HandlerFunc {
 
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Помилка читання даних токена"})
 
+	}
+}
+
+func AdminMiddle() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		roleContext, exists := c.Get("userRole")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Не знайдено роль користувача"})
+			return
+		}
+
+		role, ok := roleContext.(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Помилка сервера: невірний формат ролі"})
+			return
+		}
+
+		if role != "admin" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Доступ заборонено: тільки для адміністраторів"})
+			return
+		}
+
+		c.Next()
 	}
 }

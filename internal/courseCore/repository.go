@@ -15,6 +15,9 @@ type CourseRepository interface {
 	GetCourseSyllabus(ctx context.Context, id int) (Course, error)
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
+	CreateCourse(ctx context.Context, title, description string) (int, error)
+	CreateModule(ctx context.Context, courseID int, title string, orderNum int) (int, error)
+	CreateLesson(ctx context.Context, moduleID int, title string, content string, orderNum int) (int, error)
 }
 
 type Repository struct {
@@ -160,4 +163,54 @@ func (r *Repository) GetCoursesByUserID(ctx context.Context, userID int) ([]Cour
 	}
 
 	return courses, nil
+}
+
+func (r *Repository) CreateCourse(ctx context.Context, title, description string) (int, error) {
+	var newID int
+	query := `
+		INSERT INTO courses (title, description)
+		VALUES ($1, $2)
+		RETURNING id
+	`
+
+	err := r.db.QueryRow(ctx, query, title, description).Scan(&newID)
+	if err != nil {
+		slog.Error("Failed to insert new course into DB", "error", err)
+		return 0, fmt.Errorf("помилка створення курсу в базі: %w", err)
+	}
+
+	return newID, nil
+}
+
+func (r *Repository) CreateModule(ctx context.Context, courseID int, title string, orderNum int) (int, error) {
+	var newID int
+	query := `
+	INSERT INTO modules(course_id, title, order_num)
+	VALUES ($1, $2, $3)
+	RETURNING id
+	`
+	err := r.db.QueryRow(ctx, query, courseID, title, orderNum).Scan(&newID)
+	if err != nil {
+		slog.Error("Failed to insert new module into DB", "error", err)
+		return 0, fmt.Errorf("помилка створення модуля в базі: %w", err)
+	}
+
+	return newID, nil
+}
+
+func (r *Repository) CreateLesson(ctx context.Context, moduleID int, title string, content string, orderNum int) (int, error) {
+	var newID int
+	query := `
+		INSERT INTO lessons (module_id, title, content, order_num)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id
+	`
+
+	err := r.db.QueryRow(ctx, query, moduleID, title, content, orderNum).Scan(&newID)
+	if err != nil {
+		slog.Error("Failed to insert new lesson into DB", "error", err)
+		return 0, fmt.Errorf("помилка створення уроку в базі: %w", err)
+	}
+
+	return newID, nil
 }

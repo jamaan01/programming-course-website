@@ -22,3 +22,19 @@ type Lesson struct {
 	Content  string `json:"content,omitempty"`
 	OrderNum int    `json:"order_num"`
 }
+
+type CreateCourseRequest struct {
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description" binding:"required"`
+}
+
+type CreateModuleRequest struct {
+	Title    string `json:"title" binding:"required"`
+	OrderNum int    `json:"order_num"`
+}
+
+type CreateLessonRequest struct {
+	Title    string `json:"title" binding:"required"`
+	Content  string `json:"content" binding:"required"`
+	OrderNum int    `json:"order_num"`
+}

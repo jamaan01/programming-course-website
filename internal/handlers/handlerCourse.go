@@ -118,3 +118,70 @@ func (h *CourseHandler) GetMyCourse(c *gin.Context) {
 
 	c.JSON(http.StatusOK, courses)
 }
+
+func (h *CourseHandler) CreateCourse(c *gin.Context) {
+	var req courseCore.CreateCourseRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних або відсутні обов'язкові поля",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	newID, err := h.service.CreateCourse(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося створити курс"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Курс успішно створено",
+		"course_id": newID,
+	})
+}
+
+func (h *CourseHandler) CreateModule(c *gin.Context) {
+	courseIDStr := c.Param("id")
+	courseID, err := strconv.Atoi(courseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невалідний ID курсу"})
+		return
+	}
+
+	var req courseCore.CreateModuleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних або відсутні обов'язкові поля", "details": err.Error()})
+		return
+	}
+
+	newModuleID, err := h.service.CreateModule(c.Request.Context(), courseID, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося створити модуль"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Модуль успішно додано до курсу", "module_id": newModuleID})
+}
+
+func (h *CourseHandler) CreateLesson(c *gin.Context) {
+	moduleIDStr := c.Param("id")
+	moduleID, err := strconv.Atoi(moduleIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невалідний ID модуля"})
+		return
+	}
+
+	var req courseCore.CreateLessonRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних або відсутні обов'язкові поля", "details": err.Error()})
+		return
+	}
+
+	newLessonID, err := h.service.CreateLesson(c.Request.Context(), moduleID, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося створити урок"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Урок успішно додано до курсу", "lesson_id": newLessonID})
+}

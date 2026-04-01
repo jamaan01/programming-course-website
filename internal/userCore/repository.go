@@ -46,11 +46,11 @@ func (r *userRepo) CreateUser(ctx context.Context, user UserDB) (int, error) {
 func (r *userRepo) GetUserByEmail(ctx context.Context, email string) (*UserDB, error) {
 	var user UserDB
 	query := `
-		SELECT id, name, email, password_hash, created_at
+		SELECT id, name, email, password_hash, role, created_at
     FROM users
     WHERE email = $1
 	`
-	err := r.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	err := r.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
@@ -64,11 +64,11 @@ func (r *userRepo) GetUserByEmail(ctx context.Context, email string) (*UserDB, e
 func (r *userRepo) GetUserByID(ctx context.Context, id int) (*UserDB, error) {
 	var user UserDB
 	query := `
-		SELECT id, name, email, password_hash, created_at
+		SELECT id, name, email, password_hash, role, created_at
 		FROM users
 		WHERE id = $1
 	`
-	err := r.db.QueryRow(ctx, query, id).Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	err := r.db.QueryRow(ctx, query, id).Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
