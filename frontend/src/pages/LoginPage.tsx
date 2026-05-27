@@ -8,15 +8,17 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import {
   Card,
-  CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/store/authStore'
+
+const passwordPattern = /^[\x21-\x7E]+$/
+const passwordPatternMessage =
+  'Пароль може містити лише латинські літери, цифри та символи без пробілів'
 
 const loginSchema = z.object({
   email: z
@@ -27,7 +29,8 @@ const loginSchema = z.object({
   password: z
     .string()
     .min(1, 'Введіть пароль')
-    .min(6, 'Пароль має містити щонайменше 6 символів'),
+    .min(6, 'Пароль має містити щонайменше 6 символів')
+    .regex(passwordPattern, passwordPatternMessage),
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
@@ -77,8 +80,12 @@ export function LoginPage() {
         </CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <CardContent className="space-y-5">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="flex flex-col px-6 pb-6"
+        noValidate
+      >
+        <div className="space-y-5">
           {authError ? (
             <div
               className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
@@ -122,10 +129,9 @@ export function LoginPage() {
               <p className="text-sm text-rose-300">{errors.password.message}</p>
             ) : null}
           </div>
-        </CardContent>
+        </div>
 
-        <CardFooter className="flex flex-col gap-4 pt-2">
-          <Button type="submit" className="w-full" disabled={isPending}>
+        <Button type="submit" className="mt-8 w-full" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -134,9 +140,9 @@ export function LoginPage() {
             ) : (
               'Увійти'
             )}
-          </Button>
+        </Button>
 
-          <p className="text-center text-sm text-slate-400">
+          <p className="mt-8 text-center text-sm text-slate-400">
             Ще не маєте акаунту?{' '}
             <Link
               to="/register"
@@ -145,7 +151,6 @@ export function LoginPage() {
               Зареєструватися
             </Link>
           </p>
-        </CardFooter>
       </form>
     </Card>
   )
