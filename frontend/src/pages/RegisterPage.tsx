@@ -40,6 +40,21 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>
 
+function getRegisterErrorMessage(authError: {
+  status?: number
+  message: string
+}) {
+  if (authError.status === 409) {
+    return 'Користувач з такою електронною поштою вже існує'
+  }
+
+  if (authError.status === 400) {
+    return 'Перевірте введені дані та спробуйте ще раз'
+  }
+
+  return authError.message
+}
+
 export function RegisterPage() {
   const navigate = useNavigate()
   const registerUser = useAuthStore((state) => state.register)
@@ -76,6 +91,9 @@ export function RegisterPage() {
   }
 
   const isPending = isLoading || isSubmitting
+  const registerErrorMessage = authError
+    ? getRegisterErrorMessage(authError)
+    : null
 
   return (
     <Card className="w-full max-w-md border-slate-800 bg-slate-900 text-slate-100 shadow-2xl shadow-slate-950/30">
@@ -97,7 +115,7 @@ export function RegisterPage() {
               className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
               role="alert"
             >
-              {authError.message}
+              {registerErrorMessage}
             </div>
           ) : null}
 

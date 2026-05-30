@@ -35,6 +35,14 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
+function getLoginErrorMessage(authError: { status?: number; message: string }) {
+  if (authError.status === 401 || authError.status === 403) {
+    return 'Невірна електронна пошта або пароль'
+  }
+
+  return authError.message
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
   const login = useAuthStore((state) => state.login)
@@ -70,6 +78,7 @@ export function LoginPage() {
   }
 
   const isPending = isLoading || isSubmitting
+  const loginErrorMessage = authError ? getLoginErrorMessage(authError) : null
 
   return (
     <Card className="w-full max-w-md border-slate-800 bg-slate-900 text-slate-100 shadow-2xl shadow-slate-950/30">
@@ -91,7 +100,7 @@ export function LoginPage() {
               className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
               role="alert"
             >
-              {authError.message}
+              {loginErrorMessage}
             </div>
           ) : null}
 
