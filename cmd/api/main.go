@@ -30,6 +30,8 @@ func main() {
 
 	r := gin.Default()
 
+	r.Use(middlewear.SetupCORS())
+
 	authGroup := r.Group("/auth")
 	{
 		authGroup.POST("/register", userHandler.Register)
