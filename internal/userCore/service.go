@@ -15,6 +15,7 @@ type UserService interface {
 	Login(ctx context.Context, req LoginRequest) (string, error)
 	GetProfile(ctx context.Context, id int) (*UserDB, error)
 	UpdateProfile(ctx context.Context, id int, req UpdateProfileRequest) error
+	UpdateUserRole(ctx context.Context, id int, req UpdateUserRoleRequest) error
 }
 
 type userService struct {
@@ -97,4 +98,8 @@ func (s *userService) UpdateProfile(ctx context.Context, id int, req UpdateProfi
 	}
 
 	return s.repo.UpdateUser(ctx, userToUpdate)
+}
+
+func (s *userService) UpdateUserRole(ctx context.Context, id int, req UpdateUserRoleRequest) error {
+	return s.repo.UpdateUserRole(ctx, id, req.Role)
 }

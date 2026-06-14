@@ -11,6 +11,8 @@ type CourseService interface {
 	CreateCourse(ctx context.Context, req CreateCourseRequest) (int, error)
 	CreateModule(ctx context.Context, courseID int, req CreateModuleRequest) (int, error)
 	CreateLesson(ctx context.Context, moduleID int, req CreateLessonRequest) (int, error)
+	DeleteCourse(ctx context.Context, id int) error
+	DeleteLesson(ctx context.Context, id int) error
 }
 
 type Service struct {
@@ -51,4 +53,12 @@ func (s *Service) CreateModule(ctx context.Context, courseID int, req CreateModu
 
 func (s *Service) CreateLesson(ctx context.Context, moduleID int, req CreateLessonRequest) (int, error) {
 	return s.repo.CreateLesson(ctx, moduleID, req.Title, req.Content, req.OrderNum)
+}
+
+func (s *Service) DeleteCourse(ctx context.Context, id int) error {
+	return s.repo.DeleteCourse(ctx, id)
+}
+
+func (s *Service) DeleteLesson(ctx context.Context, id int) error {
+	return s.repo.DeleteLesson(ctx, id)
 }

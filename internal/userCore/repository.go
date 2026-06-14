@@ -16,6 +16,7 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (*UserDB, error)
 	GetUserByID(ctx context.Context, id int) (*UserDB, error)
 	UpdateUser(ctx context.Context, user UserDB) error
+	UpdateUserRole(ctx context.Context, id int, role string) error
 }
 
 type userRepo struct {
@@ -89,6 +90,25 @@ func (r *userRepo) UpdateUser(ctx context.Context, user UserDB) error {
 	commandTag, err := r.db.Exec(ctx, query, user.Name, user.Email, user.ID)
 	if err != nil {
 		slog.Error("Failed to update user", "error", err)
+		return err
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
+func (r *userRepo) UpdateUserRole(ctx context.Context, id int, role string) error {
+	query := `
+	UPDATE users
+	SET role = $1
+	WHERE id = $2
+	`
+
+	commandTag, err := r.db.Exec(ctx, query, role, id)
+	if err != nil {
+		slog.Error("Failed to update user role", "error", err)
 		return err
 	}
 

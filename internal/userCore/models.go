@@ -34,3 +34,7 @@ type UpdateProfileRequest struct {
 	Name  string `json:"name" binding:"required,min=2,max=50"`
 	Email string `json:"email" binding:"required,email"`
 }
+
+type UpdateUserRoleRequest struct {
+	Role string `json:"role" binding:"required"`
+}

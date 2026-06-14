@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jamaan01/kursovaia/internal/userCore"
@@ -65,7 +66,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"JWT": tk})
+	c.JSON(http.StatusOK, gin.H{"token": tk})
 }
 
 func (h *AuthHandler) GetProfile(c *gin.Context) {
@@ -92,10 +93,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"id":         user.ID,
-		"name":       user.Name,
-		"email":      user.Email,
-		"created_at": user.CreatedAt,
+		"name": user.Name,
 	})
 }
 
@@ -124,4 +122,32 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Профіль успішно оновлено!"})
+}
+
+func (h *AuthHandler) UpdateUserRole(c *gin.Context) {
+	idStr := c.Param("id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неправильний формат ID"})
+		return
+	}
+
+	var req userCore.UpdateUserRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних"})
+		return
+	}
+
+	err = h.service.UpdateUserRole(c.Request.Context(), id, req)
+	if err != nil {
+		if errors.Is(err, userCore.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Користувача не знайдено"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Помилка оновлення ролі"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Роль користувача успішно оновлено!"})
 }

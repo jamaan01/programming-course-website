@@ -18,6 +18,8 @@ type CourseRepository interface {
 	CreateCourse(ctx context.Context, title, description string) (int, error)
 	CreateModule(ctx context.Context, courseID int, title string, orderNum int) (int, error)
 	CreateLesson(ctx context.Context, moduleID int, title string, content string, orderNum int) (int, error)
+	DeleteCourse(ctx context.Context, id int) error
+	DeleteLesson(ctx context.Context, id int) error
 }
 
 type Repository struct {
@@ -213,4 +215,36 @@ func (r *Repository) CreateLesson(ctx context.Context, moduleID int, title strin
 	}
 
 	return newID, nil
+}
+
+func (r *Repository) DeleteCourse(ctx context.Context, id int) error {
+	query := `DELETE FROM courses WHERE id = $1`
+
+	commandTag, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		slog.Error("Failed to delete course from DB", "error", err)
+		return fmt.Errorf("помилка видалення курсу в базі: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return fmt.Errorf("курс не знайдено")
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteLesson(ctx context.Context, id int) error {
+	query := `DELETE FROM lessons WHERE id = $1`
+
+	commandTag, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		slog.Error("Failed to delete lesson from DB", "error", err)
+		return fmt.Errorf("помилка видалення уроку в базі: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return fmt.Errorf("урок не знайдено")
+	}
+
+	return nil
 }

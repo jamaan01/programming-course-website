@@ -185,3 +185,47 @@ func (h *CourseHandler) CreateLesson(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Урок успішно додано до курсу", "lesson_id": newLessonID})
 }
+
+func (h *CourseHandler) DeleteCourse(c *gin.Context) {
+	idStr := c.Param("id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неправильний формат ID"})
+		return
+	}
+
+	err = h.service.DeleteCourse(c.Request.Context(), id)
+	if err != nil {
+		if strings.Contains(err.Error(), "не знайдено") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося видалити курс"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Курс успішно видалено"})
+}
+
+func (h *CourseHandler) DeleteLesson(c *gin.Context) {
+	idStr := c.Param("id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неправильний формат ID"})
+		return
+	}
+
+	err = h.service.DeleteLesson(c.Request.Context(), id)
+	if err != nil {
+		if strings.Contains(err.Error(), "не знайдено") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося видалити урок"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Урок успішно видалено"})
+}

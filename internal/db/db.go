@@ -2,30 +2,25 @@ package db
 
 import (
 	"context"
-	"log/slog"
-	"os"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jamaan01/kursovaia/internal/config"
 	"github.com/joho/godotenv"
 )
 
-var Pool *pgxpool.Pool
+func Connect(ctx context.Context) (*pgxpool.Pool, error) {
+	_ = godotenv.Load()
 
-func init() {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		slog.Error("Error loading .env file", "error", err)
-		os.Exit(1)
+	databaseURL := config.DatabaseURL()
+	if databaseURL == "" {
+		return nil, fmt.Errorf("DB_URL is not set")
 	}
 
-	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
-		slog.Error("No connect pgsl", "error", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
-	Pool = pool
-}
 
-func closeBD() {
-	Pool.Close()
+	return pool, nil
 }

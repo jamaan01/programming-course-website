@@ -1,14 +1,14 @@
 package utils
 
 import (
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jamaan01/kursovaia/internal/config"
 )
 
 func GenerateToken(userID int, role string) (string, error) {
-	secretKey := []byte(os.Getenv("SEKRETKEY_JWT"))
+	secretKey := []byte(config.JWTSecret())
 
 	claim := jwt.MapClaims{
 		"user_id": userID,

@@ -1,0 +1,80 @@
+package app
+
+import (
+	"context"
+	"log/slog"
+	"os"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jamaan01/kursovaia/internal/config"
+	"github.com/jamaan01/kursovaia/internal/courseCore"
+	"github.com/jamaan01/kursovaia/internal/db"
+	"github.com/jamaan01/kursovaia/internal/handlers"
+	"github.com/jamaan01/kursovaia/internal/lessonCore"
+	"github.com/jamaan01/kursovaia/internal/middlewear"
+	"github.com/jamaan01/kursovaia/internal/userCore"
+)
+
+func Run() error {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+
+	pool, err := db.Connect(context.Background())
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	userRepo := userCore.NewUserRepository(pool)
+	userService := userCore.NewUserService(userRepo)
+	userHandler := handlers.NewAuthHandler(userService)
+
+	courseRepo := courseCore.NewRepository(pool)
+	courseService := courseCore.NewService(courseRepo)
+	courseHandler := handlers.NewCourseHandler(courseService)
+
+	lessonRepo := lessonCore.NewRepository(pool)
+	lessonService := lessonCore.NewService(lessonRepo)
+	lessonHandler := handlers.NewLessonHandler(lessonService)
+
+	r := gin.Default()
+
+	r.Use(middlewear.SetupCORS())
+
+	authGroup := r.Group("/auth")
+	{
+		authGroup.POST("/register", userHandler.Register)
+		authGroup.POST("/login", userHandler.Login)
+	}
+
+	publicApiGroup := r.Group("/api")
+	{
+		publicApiGroup.GET("/courses", courseHandler.GetAllCourses)
+		publicApiGroup.GET("/courses/:id", courseHandler.GetCourseByID)
+		publicApiGroup.GET("/courses/:id/syllabus", courseHandler.GetCourseSyllabus)
+	}
+
+	apiGroup := r.Group("/api")
+	apiGroup.Use(middlewear.AuthMiddle())
+	{
+		apiGroup.GET("/profile", userHandler.GetProfile)
+		apiGroup.PUT("/profile", userHandler.UpdateProfile)
+		apiGroup.GET("/lessons/:id", lessonHandler.GetLessonByID)
+		apiGroup.POST("/courses/:id/enroll", courseHandler.EnrollUser)
+		apiGroup.GET("/profile/courses", courseHandler.GetMyCourse)
+		apiGroup.POST("/lessons/:id/complete", lessonHandler.CompleteLesson)
+		apiGroup.GET("/courses/:id/progress", lessonHandler.GetLessonProgress)
+
+		adminGroup := apiGroup.Group("/admin")
+		adminGroup.Use(middlewear.AdminMiddle())
+		{
+			adminGroup.POST("/courses", courseHandler.CreateCourse)
+			adminGroup.POST("/courses/:id/modules", courseHandler.CreateModule)
+			adminGroup.POST("/modules/:id/lessons", courseHandler.CreateLesson)
+			adminGroup.PUT("/users/:id/role", userHandler.UpdateUserRole)
+			adminGroup.DELETE("/courses/:id", courseHandler.DeleteCourse)
+			adminGroup.DELETE("/lessons/:id", courseHandler.DeleteLesson)
+		}
+	}
+
+	return r.Run(config.ServerAddr())
+}

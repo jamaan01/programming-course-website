@@ -3,11 +3,11 @@ package middlewear
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jamaan01/kursovaia/internal/config"
 )
 
 func AuthMiddle() gin.HandlerFunc {
@@ -30,7 +30,7 @@ func AuthMiddle() gin.HandlerFunc {
 				return nil, fmt.Errorf("неочікуваний метод підпису")
 			}
 
-			return []byte(os.Getenv("SEKRETKEY_JWT")), nil
+			return []byte(config.JWTSecret()), nil
 		})
 
 		if err != nil || !token.Valid {
