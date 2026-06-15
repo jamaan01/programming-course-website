@@ -30,6 +30,12 @@ func (s *Service) GetLessonByID(ctx context.Context, lessonID int, userID int) (
 }
 
 func (s *Service) UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error {
+	err := s.repo.CheckAccess(ctx, userID, lessonID)
+	if err != nil {
+		slog.Error("Check access error", "error", err)
+		return err
+	}
+
 	return s.repo.UpdateLessonProgress(ctx, userID, lessonID, isCompleted)
 }
 

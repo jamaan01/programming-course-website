@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,7 +37,7 @@ func (h *LessonHandler) GetLessonByID(c *gin.Context) {
 
 	lesson, err := h.service.GetLessonByID(c.Request.Context(), lessonID, userID)
 	if err != nil {
-		if strings.Contains(err.Error(), "доступ заборонено") {
+		if errors.Is(err, lessonCore.ErrAccessDenied) || strings.Contains(err.Error(), "доступ заборонено") {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
@@ -85,6 +86,11 @@ func (h *LessonHandler) CompleteLesson(c *gin.Context) {
 
 	err = h.service.UpdateLessonProgress(c.Request.Context(), userID, lessonID, input.Completed)
 	if err != nil {
+		if errors.Is(err, lessonCore.ErrAccessDenied) || strings.Contains(err.Error(), "доступ заборонено") {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося зберегти прогрес"})
 		return
 	}
@@ -116,6 +122,11 @@ func (h *LessonHandler) GetLessonProgress(c *gin.Context) {
 
 	completedIDs, err := h.service.GetCompleteLesson(c.Request.Context(), userID, courseID)
 	if err != nil {
+		if errors.Is(err, lessonCore.ErrAccessDenied) || strings.Contains(err.Error(), "доступ заборонено") {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося отримати прогрес"})
 		return
 	}

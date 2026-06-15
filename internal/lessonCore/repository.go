@@ -2,11 +2,14 @@ package lessonCore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var ErrAccessDenied = errors.New("access denied")
 
 type LessonRepository interface {
 	GetLessonByID(ctx context.Context, id int) (Lesson, error)
@@ -56,7 +59,31 @@ func (r *Repository) CheckAccess(ctx context.Context, userID int, lessonID int) 
 	}
 
 	if !hasAccess {
-		return fmt.Errorf("доступ заборонено: ви не придбали цей курс")
+		return fmt.Errorf("%w: доступ заборонено: ви не придбали цей курс", ErrAccessDenied)
+	}
+
+	return nil
+}
+
+func (r *Repository) checkCourseEnrollment(ctx context.Context, userID int, courseID int) error {
+	var isEnrolled bool
+
+	query := `
+	SELECT EXISTS (
+		SELECT 1
+		FROM enrollments
+		WHERE user_id = $1 AND course_id = $2
+	)
+	`
+
+	err := r.db.QueryRow(ctx, query, userID, courseID).Scan(&isEnrolled)
+	if err != nil {
+		slog.Error("Check course enrollment error", "error", err)
+		return fmt.Errorf("помилка бази даних при перевірці запису на курс: %w", err)
+	}
+
+	if !isEnrolled {
+		return fmt.Errorf("%w: доступ заборонено: ви не придбали цей курс", ErrAccessDenied)
 	}
 
 	return nil
@@ -82,6 +109,10 @@ func (r *Repository) UpdateLessonProgress(ctx context.Context, userID int, lesso
 }
 
 func (r *Repository) GetCompletedLesson(ctx context.Context, userID int, courseID int) ([]int, error) {
+	if err := r.checkCourseEnrollment(ctx, userID, courseID); err != nil {
+		return nil, err
+	}
+
 	query := `
 		SELECT lp.lesson_id
 		FROM lesson_progress lp
