@@ -30,6 +30,7 @@ export interface ProfileResponse {
   id: number
   name: string
   email: string
+  role: string
   created_at: string
 }
 
@@ -37,6 +38,7 @@ export interface Course {
   id: number
   title: string
   description: string
+  is_published: boolean
   modules?: CourseModule[]
 }
 

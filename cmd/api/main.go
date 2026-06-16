@@ -10,6 +10,7 @@ import (
 	"github.com/jamaan01/kursovaia/internal/handlers"
 	"github.com/jamaan01/kursovaia/internal/lessonCore"
 	"github.com/jamaan01/kursovaia/internal/middlewear"
+	"github.com/jamaan01/kursovaia/internal/questionCore"
 	"github.com/jamaan01/kursovaia/internal/userCore"
 )
 
@@ -27,6 +28,10 @@ func main() {
 	lessonRepo := lessonCore.NewRepository(db.Pool)
 	lessonService := lessonCore.NewService(lessonRepo)
 	lessonHandler := handlers.NewLessonHandler(lessonService)
+
+	questionRepo := questionCore.NewRepository(db.Pool)
+	questionService := questionCore.NewService(questionRepo)
+	questionHandler := handlers.NewQuestionHandler(questionService)
 
 	r := gin.Default()
 
@@ -59,9 +64,15 @@ func main() {
 		adminGroup := apiGroup.Group("/admin")
 		adminGroup.Use(middlewear.AdminMiddle())
 		{
+			adminGroup.GET("/courses", courseHandler.GetAllCoursesAdmin)
 			adminGroup.POST("/courses", courseHandler.CreateCourse)
+			adminGroup.GET("/courses/:id", courseHandler.GetCourseByIDAdmin)
+			adminGroup.GET("/courses/:id/syllabus", courseHandler.GetCourseSyllabusAdmin)
+			adminGroup.PATCH("/courses/:id/publish", courseHandler.UpdateCoursePublishStatus)
 			adminGroup.POST("/courses/:id/modules", courseHandler.CreateModule)
 			adminGroup.POST("/modules/:id/lessons", courseHandler.CreateLesson)
+			adminGroup.POST("/lessons/:id/questions", questionHandler.CreateQuestion)
+			adminGroup.GET("/lessons/:id/questions", questionHandler.GetQuestionsByLessonID)
 		}
 	}
 	err := r.Run(":8080")

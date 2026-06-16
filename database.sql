@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS courses (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL
+    description TEXT NOT NULL,
+    is_published BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS lessons (
@@ -73,5 +74,27 @@ CREATE TABLE lesson_progress (
     PRIMARY KEY (user_id, lesson_id)
 );
 
-ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user';
+
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS lesson_questions (
+    id SERIAL PRIMARY KEY,
+    lesson_id INT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    question_text TEXT NOT NULL,
+    order_num INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS lesson_question_options (
+    id SERIAL PRIMARY KEY,
+    question_id INT NOT NULL REFERENCES lesson_questions(id) ON DELETE CASCADE,
+    option_text TEXT NOT NULL,
+    is_correct BOOLEAN NOT NULL DEFAULT false,
+    order_num INT NOT NULL DEFAULT 0
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS one_correct_option_per_question
+ON lesson_question_options(question_id)
+WHERE is_correct = true;
 

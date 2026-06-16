@@ -95,6 +95,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		"id":         user.ID,
 		"name":       user.Name,
 		"email":      user.Email,
+		"role":       user.Role,
 		"created_at": user.CreatedAt,
 	})
 }

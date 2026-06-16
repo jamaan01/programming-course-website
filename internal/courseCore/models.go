@@ -4,6 +4,7 @@ type Course struct {
 	ID          int      `json:"id"`
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
+	IsPublished bool     `json:"is_published"`
 	Modules     []Module `json:"modules,omitempty"`
 }
 
@@ -37,4 +38,8 @@ type CreateLessonRequest struct {
 	Title    string `json:"title" binding:"required"`
 	Content  string `json:"content" binding:"required"`
 	OrderNum int    `json:"order_num"`
+}
+
+type UpdateCoursePublishRequest struct {
+	IsPublished *bool `json:"is_published"`
 }

@@ -6,6 +6,10 @@ type CourseService interface {
 	GetAllCourses(ctx context.Context) ([]Course, error)
 	GetCourseByID(ctx context.Context, id int) (Course, error)
 	GetCourseSyllabus(ctx context.Context, id int) (Course, error)
+	GetAllCoursesAdmin(ctx context.Context) ([]Course, error)
+	GetCourseByIDAdmin(ctx context.Context, id int) (Course, error)
+	GetCourseSyllabusAdmin(ctx context.Context, id int) (Course, error)
+	UpdateCoursePublishStatus(ctx context.Context, id int, isPublished bool) error
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
 	CreateCourse(ctx context.Context, req CreateCourseRequest) (int, error)
@@ -31,6 +35,22 @@ func (s *Service) GetCourseByID(ctx context.Context, id int) (Course, error) {
 
 func (s *Service) GetCourseSyllabus(ctx context.Context, id int) (Course, error) {
 	return s.repo.GetCourseSyllabus(ctx, id)
+}
+
+func (s *Service) GetAllCoursesAdmin(ctx context.Context) ([]Course, error) {
+	return s.repo.GetAllCoursesAdmin(ctx)
+}
+
+func (s *Service) GetCourseByIDAdmin(ctx context.Context, id int) (Course, error) {
+	return s.repo.GetCourseByIDAdmin(ctx, id)
+}
+
+func (s *Service) GetCourseSyllabusAdmin(ctx context.Context, id int) (Course, error) {
+	return s.repo.GetCourseSyllabusAdmin(ctx, id)
+}
+
+func (s *Service) UpdateCoursePublishStatus(ctx context.Context, id int, isPublished bool) error {
+	return s.repo.UpdateCoursePublishStatus(ctx, id, isPublished)
 }
 
 func (s *Service) EnrollUser(ctx context.Context, userID int, courseID int) error {
