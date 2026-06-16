@@ -12,9 +12,10 @@ import type { Course } from '@/types/api'
 
 interface CourseCardProps {
   course: Course
+  ctaLabel?: string
 }
 
-export function CourseCard({ course }: CourseCardProps) {
+export function CourseCard({ course, ctaLabel = 'Переглянути курс' }: CourseCardProps) {
   const title = course.title.trim() || 'Курс без назви'
   const description =
     course.description.trim() || 'Опис курсу поки не додано.'
@@ -38,9 +39,9 @@ export function CourseCard({ course }: CourseCardProps) {
         <Link
           to={`/courses/${course.id}`}
           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 text-sm font-medium text-slate-950 transition-colors hover:bg-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          aria-label={`Переглянути курс: ${title}`}
+          aria-label={`${ctaLabel}: ${title}`}
         >
-          Переглянути курс
+          {ctaLabel}
           <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </CardFooter>
