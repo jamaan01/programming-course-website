@@ -1,4 +1,4 @@
-import { BookOpen, LogOut, User } from 'lucide-react'
+import { BookOpen, LogOut, ShieldCheck, User } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -15,8 +15,10 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function Header() {
   const navigate = useNavigate()
   const authStatus = useAuthStore((state) => state.authStatus)
+  const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const isAuthenticated = authStatus === 'authenticated'
+  const isAdmin = isAuthenticated && user?.role === 'admin'
 
   function handleLogout() {
     logout()
@@ -43,6 +45,14 @@ export function Header() {
 
           {isAuthenticated ? (
             <>
+              {isAdmin ? (
+                <NavLink to="/admin" className={navLinkClass}>
+                  <span className="inline-flex items-center gap-2">
+                    <ShieldCheck className="size-4" aria-hidden="true" />
+                    Адмін
+                  </span>
+                </NavLink>
+              ) : null}
               <NavLink to="/profile" className={navLinkClass}>
                 <span className="inline-flex items-center gap-2">
                   <User className="size-4" aria-hidden="true" />

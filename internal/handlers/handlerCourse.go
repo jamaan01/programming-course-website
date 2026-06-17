@@ -227,6 +227,11 @@ func (h *CourseHandler) CreateModule(c *gin.Context) {
 
 	newModuleID, err := h.service.CreateModule(c.Request.Context(), courseID, req)
 	if err != nil {
+		if errors.Is(err, courseCore.ErrDuplicateOrderNum) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Цей порядковий номер вже зайнятий"})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося створити модуль"})
 		return
 	}
@@ -248,6 +253,11 @@ func (h *CourseHandler) CreateLesson(c *gin.Context) {
 
 	newLessonID, err := h.service.CreateLesson(c.Request.Context(), moduleID, req)
 	if err != nil {
+		if errors.Is(err, courseCore.ErrDuplicateOrderNum) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Цей порядковий номер вже зайнятий"})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося створити урок"})
 		return
 	}

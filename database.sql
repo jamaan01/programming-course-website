@@ -98,3 +98,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_correct_option_per_question
 ON lesson_question_options(question_id)
 WHERE is_correct = true;
 
+ALTER TABLE modules
+ADD CONSTRAINT modules_course_order_unique UNIQUE (course_id, order_num);
+
+ALTER TABLE lessons
+ADD CONSTRAINT lessons_module_order_unique UNIQUE (module_id, order_num);
+
+ALTER TABLE lesson_questions
+ADD CONSTRAINT lesson_questions_lesson_order_unique UNIQUE (lesson_id, order_num);
+
+ALTER TABLE lesson_question_options
+ADD CONSTRAINT lesson_question_options_question_order_unique UNIQUE (question_id, order_num);

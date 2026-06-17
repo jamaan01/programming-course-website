@@ -35,6 +35,11 @@ func (h *QuestionHandler) CreateQuestion(c *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, questionCore.ErrDuplicateOrderNum) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Цей порядковий номер вже зайнятий"})
+			return
+		}
+
 		if errors.Is(err, questionCore.ErrLessonNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Урок не знайдено"})
 			return

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,6 +14,7 @@ import (
 type QuestionRepository interface {
 	CreateQuestion(ctx context.Context, lessonID int, req CreateQuestionRequest) (int, error)
 	GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error)
+	QuestionOrderExists(ctx context.Context, lessonID int, orderNum int) (bool, error)
 }
 
 type Repository struct {
@@ -43,6 +45,9 @@ func (r *Repository) CreateQuestion(ctx context.Context, lessonID int, req Creat
 	`
 	err = tx.QueryRow(ctx, questionQuery, lessonID, req.QuestionText, req.OrderNum).Scan(&questionID)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
+			return 0, ErrDuplicateOrderNum
+		}
 		slog.Error("CreateQuestion insert question error", "error", err)
 		return 0, fmt.Errorf("question create error: %w", err)
 	}
@@ -54,6 +59,9 @@ func (r *Repository) CreateQuestion(ctx context.Context, lessonID int, req Creat
 	for _, option := range req.Options {
 		_, err := tx.Exec(ctx, optionQuery, questionID, option.OptionText, option.IsCorrect, option.OrderNum)
 		if err != nil {
+			if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
+				return 0, ErrDuplicateOrderNum
+			}
 			slog.Error("CreateQuestion insert option error", "error", err)
 			return 0, fmt.Errorf("question option create error: %w", err)
 		}
@@ -65,6 +73,19 @@ func (r *Repository) CreateQuestion(ctx context.Context, lessonID int, req Creat
 	}
 
 	return questionID, nil
+}
+
+func (r *Repository) QuestionOrderExists(ctx context.Context, lessonID int, orderNum int) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM lesson_questions WHERE lesson_id = $1 AND order_num = $2)`
+
+	err := r.db.QueryRow(ctx, query, lessonID, orderNum).Scan(&exists)
+	if err != nil {
+		slog.Error("Question order check error", "error", err)
+		return false, fmt.Errorf("question order check error: %w", err)
+	}
+
+	return exists, nil
 }
 
 func (r *Repository) GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error) {

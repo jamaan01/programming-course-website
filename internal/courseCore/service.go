@@ -66,9 +66,27 @@ func (s *Service) CreateCourse(ctx context.Context, req CreateCourseRequest) (in
 }
 
 func (s *Service) CreateModule(ctx context.Context, courseID int, req CreateModuleRequest) (int, error) {
+	exists, err := s.repo.ModuleOrderExists(ctx, courseID, req.OrderNum)
+	if err != nil {
+		return 0, err
+	}
+
+	if exists {
+		return 0, ErrDuplicateOrderNum
+	}
+
 	return s.repo.CreateModule(ctx, courseID, req.Title, req.OrderNum)
 }
 
 func (s *Service) CreateLesson(ctx context.Context, moduleID int, req CreateLessonRequest) (int, error) {
+	exists, err := s.repo.LessonOrderExists(ctx, moduleID, req.OrderNum)
+	if err != nil {
+		return 0, err
+	}
+
+	if exists {
+		return 0, ErrDuplicateOrderNum
+	}
+
 	return s.repo.CreateLesson(ctx, moduleID, req.Title, req.Content, req.OrderNum)
 }

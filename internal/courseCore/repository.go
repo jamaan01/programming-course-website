@@ -14,6 +14,7 @@ import (
 var ErrCourseNotFound = errors.New("course not found")
 var ErrCourseNotPublished = errors.New("course is not published")
 var ErrAlreadyEnrolled = errors.New("user already enrolled")
+var ErrDuplicateOrderNum = errors.New("duplicate order num")
 
 type CourseRepository interface {
 	GetAllCourses(ctx context.Context) ([]Course, error)
@@ -26,6 +27,8 @@ type CourseRepository interface {
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
 	CreateCourse(ctx context.Context, title, description string) (int, error)
+	ModuleOrderExists(ctx context.Context, courseID int, orderNum int) (bool, error)
+	LessonOrderExists(ctx context.Context, moduleID int, orderNum int) (bool, error)
 	CreateModule(ctx context.Context, courseID int, title string, orderNum int) (int, error)
 	CreateLesson(ctx context.Context, moduleID int, title string, content string, orderNum int) (int, error)
 }
@@ -157,6 +160,32 @@ func (r *Repository) CreateCourse(ctx context.Context, title, description string
 	return newID, nil
 }
 
+func (r *Repository) ModuleOrderExists(ctx context.Context, courseID int, orderNum int) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM modules WHERE course_id = $1 AND order_num = $2)`
+
+	err := r.db.QueryRow(ctx, query, courseID, orderNum).Scan(&exists)
+	if err != nil {
+		slog.Error("Module order check error", "error", err)
+		return false, fmt.Errorf("module order check error: %w", err)
+	}
+
+	return exists, nil
+}
+
+func (r *Repository) LessonOrderExists(ctx context.Context, moduleID int, orderNum int) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM lessons WHERE module_id = $1 AND order_num = $2)`
+
+	err := r.db.QueryRow(ctx, query, moduleID, orderNum).Scan(&exists)
+	if err != nil {
+		slog.Error("Lesson order check error", "error", err)
+		return false, fmt.Errorf("lesson order check error: %w", err)
+	}
+
+	return exists, nil
+}
+
 func (r *Repository) CreateModule(ctx context.Context, courseID int, title string, orderNum int) (int, error) {
 	var newID int
 	query := `
@@ -166,6 +195,9 @@ func (r *Repository) CreateModule(ctx context.Context, courseID int, title strin
 	`
 	err := r.db.QueryRow(ctx, query, courseID, title, orderNum).Scan(&newID)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
+			return 0, ErrDuplicateOrderNum
+		}
 		slog.Error("Failed to insert new module into DB", "error", err)
 		return 0, fmt.Errorf("module create error: %w", err)
 	}
@@ -183,6 +215,9 @@ func (r *Repository) CreateLesson(ctx context.Context, moduleID int, title strin
 
 	err := r.db.QueryRow(ctx, query, moduleID, title, content, orderNum).Scan(&newID)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
+			return 0, ErrDuplicateOrderNum
+		}
 		slog.Error("Failed to insert new lesson into DB", "error", err)
 		return 0, fmt.Errorf("lesson create error: %w", err)
 	}
@@ -221,7 +256,7 @@ func (r *Repository) getCourseSyllabus(ctx context.Context, query string, id int
 		return Course{}, err
 	}
 
-	queryModules := `SELECT id, course_id, title, order_num FROM modules WHERE course_id = $1 ORDER BY order_num ASC`
+	queryModules := `SELECT id, course_id, title, order_num FROM modules WHERE course_id = $1 ORDER BY order_num ASC, id ASC`
 	moduleRows, err := r.db.Query(ctx, queryModules, id)
 	if err != nil {
 		slog.Error("Modules get error", "error", err)
@@ -238,7 +273,7 @@ func (r *Repository) getCourseSyllabus(ctx context.Context, query string, id int
 			return Course{}, fmt.Errorf("module scan error: %w", err)
 		}
 
-		queryLessons := `SELECT id, module_id, title, order_num FROM lessons WHERE module_id = $1 ORDER BY order_num ASC`
+		queryLessons := `SELECT id, module_id, title, order_num FROM lessons WHERE module_id = $1 ORDER BY order_num ASC, id ASC`
 		lessonRows, err := r.db.Query(ctx, queryLessons, m.ID)
 		if err != nil {
 			slog.Error("Lessons get error", "error", err)

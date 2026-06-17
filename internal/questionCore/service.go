@@ -8,6 +8,7 @@ import (
 
 var ErrInvalidQuestion = errors.New("invalid question")
 var ErrLessonNotFound = errors.New("lesson not found")
+var ErrDuplicateOrderNum = errors.New("duplicate order num")
 
 type QuestionService interface {
 	CreateQuestion(ctx context.Context, lessonID int, req CreateQuestionRequest) (int, error)
@@ -32,10 +33,16 @@ func (s *Service) CreateQuestion(ctx context.Context, lessonID int, req CreateQu
 	}
 
 	correctCount := 0
+	optionOrders := make(map[int]bool)
 	for _, option := range req.Options {
 		if strings.TrimSpace(option.OptionText) == "" {
 			return 0, ErrInvalidQuestion
 		}
+
+		if optionOrders[option.OrderNum] {
+			return 0, ErrDuplicateOrderNum
+		}
+		optionOrders[option.OrderNum] = true
 
 		if option.IsCorrect {
 			correctCount++
@@ -44,6 +51,15 @@ func (s *Service) CreateQuestion(ctx context.Context, lessonID int, req CreateQu
 
 	if correctCount != 1 {
 		return 0, ErrInvalidQuestion
+	}
+
+	exists, err := s.repo.QuestionOrderExists(ctx, lessonID, req.OrderNum)
+	if err != nil {
+		return 0, err
+	}
+
+	if exists {
+		return 0, ErrDuplicateOrderNum
 	}
 
 	return s.repo.CreateQuestion(ctx, lessonID, req)

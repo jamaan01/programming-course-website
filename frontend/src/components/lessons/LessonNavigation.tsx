@@ -15,18 +15,18 @@ export function LessonNavigation({
   previousLesson,
   nextLesson,
 }: LessonNavigationProps) {
+  const enabledLinkClass =
+    'inline-flex h-auto items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-left text-sm font-medium text-slate-200 transition-all hover:bg-slate-800 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950'
+
   return (
     <nav
       className="grid gap-3 sm:grid-cols-2"
       aria-label="Навігація між уроками"
     >
       {previousLesson ? (
-        <Button
-          variant="outline"
-          className="h-auto justify-start border-slate-700 bg-slate-900 px-4 py-3 text-left text-slate-200 hover:bg-slate-800 hover:text-slate-100"
-          render={
-            <Link to={`/courses/${courseId}/lessons/${previousLesson.id}`} />
-          }
+        <Link
+          to={`/courses/${courseId}/lessons/${previousLesson.id}`}
+          className={`${enabledLinkClass} justify-start`}
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           <span className="min-w-0">
@@ -35,7 +35,7 @@ export function LessonNavigation({
             </span>
             <span className="block truncate">{previousLesson.title}</span>
           </span>
-        </Button>
+        </Link>
       ) : (
         <Button
           type="button"
@@ -49,10 +49,9 @@ export function LessonNavigation({
       )}
 
       {nextLesson ? (
-        <Button
-          variant="outline"
-          className="h-auto justify-start border-slate-700 bg-slate-900 px-4 py-3 text-left text-slate-200 hover:bg-slate-800 hover:text-slate-100 sm:justify-end"
-          render={<Link to={`/courses/${courseId}/lessons/${nextLesson.id}`} />}
+        <Link
+          to={`/courses/${courseId}/lessons/${nextLesson.id}`}
+          className={`${enabledLinkClass} justify-start sm:justify-end`}
         >
           <span className="min-w-0 sm:text-right">
             <span className="block text-xs text-slate-500">
@@ -61,7 +60,7 @@ export function LessonNavigation({
             <span className="block truncate">{nextLesson.title}</span>
           </span>
           <ArrowRight className="size-4" aria-hidden="true" />
-        </Button>
+        </Link>
       ) : (
         <Button
           type="button"

@@ -70,6 +70,79 @@ export interface CourseProgressResponse {
   completed_lesson_ids: number[]
 }
 
+export interface CreateCourseRequest {
+  title: string
+  description: string
+}
+
+export interface CreateCourseResponse {
+  message: string
+  course_id: number
+}
+
+export interface CreateModuleRequest {
+  title: string
+  order_num: number
+}
+
+export interface CreateModuleResponse {
+  message: string
+  module_id: number
+}
+
+export interface CreateLessonRequest {
+  title: string
+  content: string
+  order_num: number
+}
+
+export interface CreateLessonResponse {
+  message: string
+  lesson_id: number
+}
+
+export interface UpdateCoursePublishRequest {
+  is_published: boolean
+}
+
+export interface UpdateCoursePublishResponse {
+  message: string
+  is_published: boolean
+}
+
+export interface AdminQuestion {
+  id: number
+  lesson_id: number
+  question_text: string
+  order_num: number
+  options: AdminQuestionOption[]
+}
+
+export interface AdminQuestionOption {
+  id: number
+  question_id: number
+  option_text: string
+  is_correct: boolean
+  order_num: number
+}
+
+export interface CreateQuestionRequest {
+  question_text: string
+  order_num: number
+  options: CreateQuestionOptionRequest[]
+}
+
+export interface CreateQuestionOptionRequest {
+  option_text: string
+  is_correct: boolean
+  order_num: number
+}
+
+export interface CreateQuestionResponse {
+  message: string
+  question_id: number
+}
+
 export interface CompleteLessonRequest {
   completed: boolean
 }
