@@ -60,6 +60,8 @@ func main() {
 		apiGroup.GET("/profile/courses", courseHandler.GetMyCourse)
 		apiGroup.POST("/lessons/:id/complete", lessonHandler.CompleteLesson)
 		apiGroup.GET("/courses/:id/progress", lessonHandler.GetLessonProgress)
+		apiGroup.GET("/lessons/:id/questions", questionHandler.GetStudentQuestionsByLessonID)
+		apiGroup.POST("/questions/:id/answer", questionHandler.SubmitAnswer)
 
 		adminGroup := apiGroup.Group("/admin")
 		adminGroup.Use(middlewear.AdminMiddle())

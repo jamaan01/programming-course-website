@@ -27,3 +27,33 @@ type CreateOptionRequest struct {
 	IsCorrect  bool   `json:"is_correct"`
 	OrderNum   int    `json:"order_num"`
 }
+
+type StudentQuestionResponse struct {
+	ID           int                     `json:"id"`
+	LessonID     int                     `json:"lesson_id"`
+	QuestionText string                  `json:"question_text"`
+	OrderNum     int                     `json:"order_num"`
+	Options      []StudentOptionResponse `json:"options"`
+}
+
+type StudentOptionResponse struct {
+	ID         int    `json:"id"`
+	QuestionID int    `json:"question_id"`
+	OptionText string `json:"option_text"`
+	OrderNum   int    `json:"order_num"`
+}
+
+type LessonQuestionsResponse struct {
+	Questions []StudentQuestionResponse `json:"questions"`
+}
+
+type SubmitAnswerRequest struct {
+	OptionID int `json:"option_id" binding:"required"`
+}
+
+type SubmitAnswerResponse struct {
+	QuestionID       int  `json:"question_id"`
+	SelectedOptionID int  `json:"selected_option_id"`
+	IsCorrect        bool `json:"is_correct"`
+	CorrectOptionID  *int `json:"correct_option_id"`
+}
