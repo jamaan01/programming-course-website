@@ -85,7 +85,7 @@ func (s *Service) GetStudentQuestionsByLessonID(ctx context.Context, userID int,
 		return LessonQuestionsResponse{}, err
 	}
 
-	return s.repo.GetStudentQuestionsByLessonID(ctx, lessonID)
+	return s.repo.GetStudentQuestionsByLessonID(ctx, userID, lessonID)
 }
 
 func (s *Service) SubmitAnswer(ctx context.Context, userID int, questionID int, req SubmitAnswerRequest) (SubmitAnswerResponse, error) {
@@ -110,15 +110,25 @@ func (s *Service) SubmitAnswer(ctx context.Context, userID int, questionID int, 
 		return SubmitAnswerResponse{}, err
 	}
 
-	correctOptionID, err := s.repo.GetCorrectOptionID(ctx, questionID)
+	savedAnswer, err := s.repo.SaveQuestionAttempt(ctx, userID, questionID, req.OptionID, isCorrect)
+	if err != nil {
+		return SubmitAnswerResponse{}, err
+	}
+
+	lessonID, err := s.repo.GetQuestionLessonID(ctx, questionID)
+	if err != nil {
+		return SubmitAnswerResponse{}, err
+	}
+
+	allQuestionsCorrect, err := s.repo.AreAllLessonQuestionsCorrect(ctx, userID, lessonID)
 	if err != nil {
 		return SubmitAnswerResponse{}, err
 	}
 
 	return SubmitAnswerResponse{
-		QuestionID:       questionID,
-		SelectedOptionID: req.OptionID,
-		IsCorrect:        isCorrect,
-		CorrectOptionID:  &correctOptionID,
+		QuestionID:          questionID,
+		SelectedOptionID:    savedAnswer.SelectedOptionID,
+		IsCorrect:           savedAnswer.IsCorrect,
+		AllQuestionsCorrect: allQuestionsCorrect,
 	}, nil
 }

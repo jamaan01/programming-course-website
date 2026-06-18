@@ -109,3 +109,13 @@ ADD CONSTRAINT lesson_questions_lesson_order_unique UNIQUE (lesson_id, order_num
 
 ALTER TABLE lesson_question_options
 ADD CONSTRAINT lesson_question_options_question_order_unique UNIQUE (question_id, order_num);
+
+CREATE TABLE IF NOT EXISTS lesson_question_attempts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    question_id INTEGER NOT NULL REFERENCES lesson_questions(id) ON DELETE CASCADE,
+    selected_option_id INTEGER NOT NULL REFERENCES lesson_question_options(id) ON DELETE CASCADE,
+    is_correct BOOLEAN NOT NULL,
+    answered_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, question_id)
+);

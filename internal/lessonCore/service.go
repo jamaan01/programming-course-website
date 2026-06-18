@@ -36,6 +36,17 @@ func (s *Service) UpdateLessonProgress(ctx context.Context, userID int, lessonID
 		return err
 	}
 
+	if isCompleted {
+		allQuestionsCorrect, err := s.repo.AreAllLessonQuestionsCorrect(ctx, userID, lessonID)
+		if err != nil {
+			return err
+		}
+
+		if !allQuestionsCorrect {
+			return ErrQuizNotComplete
+		}
+	}
+
 	return s.repo.UpdateLessonProgress(ctx, userID, lessonID, isCompleted)
 }
 

@@ -66,6 +66,43 @@ export interface Lesson {
   order_num: number
 }
 
+export interface LessonQuestionOption {
+  id: number
+  question_id: number
+  option_text: string
+  order_num: number
+}
+
+export interface LessonQuestionUserAnswer {
+  selected_option_id: number
+  is_correct: boolean
+}
+
+export interface LessonQuestion {
+  id: number
+  lesson_id: number
+  question_text: string
+  order_num: number
+  options: LessonQuestionOption[]
+  user_answer: LessonQuestionUserAnswer | null
+}
+
+export interface LessonQuestionsResponse {
+  questions: LessonQuestion[]
+  all_questions_correct: boolean
+}
+
+export interface SubmitAnswerRequest {
+  option_id: number
+}
+
+export interface SubmitAnswerResponse {
+  question_id: number
+  selected_option_id: number
+  is_correct: boolean
+  all_questions_correct: boolean
+}
+
 export interface CourseProgressResponse {
   completed_lesson_ids: number[]
 }

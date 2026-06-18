@@ -10,10 +10,12 @@ import (
 )
 
 var ErrAccessDenied = errors.New("access denied")
+var ErrQuizNotComplete = errors.New("lesson quiz not complete")
 
 type LessonRepository interface {
 	GetLessonByID(ctx context.Context, id int) (Lesson, error)
 	CheckAccess(ctx context.Context, userID int, lessonID int) error
+	AreAllLessonQuestionsCorrect(ctx context.Context, userID int, lessonID int) (bool, error)
 	UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error
 	GetCompletedLesson(ctx context.Context, userID int, courseID int) ([]int, error)
 }
@@ -87,6 +89,35 @@ func (r *Repository) checkCourseEnrollment(ctx context.Context, userID int, cour
 	}
 
 	return nil
+}
+
+func (r *Repository) AreAllLessonQuestionsCorrect(ctx context.Context, userID int, lessonID int) (bool, error) {
+	var allQuestionsCorrect bool
+	query := `
+		SELECT
+			(
+				SELECT COUNT(*)
+				FROM lesson_questions
+				WHERE lesson_id = $1
+			)
+			=
+			(
+				SELECT COUNT(*)
+				FROM lesson_question_attempts qa
+				JOIN lesson_questions q ON qa.question_id = q.id
+				WHERE q.lesson_id = $1
+					AND qa.user_id = $2
+					AND qa.is_correct = true
+			) AS all_questions_correct
+	`
+
+	err := r.db.QueryRow(ctx, query, lessonID, userID).Scan(&allQuestionsCorrect)
+	if err != nil {
+		slog.Error("Check lesson quiz completion error", "error", err)
+		return false, fmt.Errorf("lesson quiz completion check error: %w", err)
+	}
+
+	return allQuestionsCorrect, nil
 }
 
 func (r *Repository) UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error {

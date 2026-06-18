@@ -1,9 +1,13 @@
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Loader2, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { LessonContent } from '@/components/lessons/LessonContent'
 import { LessonNavigation } from '@/components/lessons/LessonNavigation'
+import {
+  LessonQuestions,
+  type LessonQuestionsStatus,
+} from '@/components/lessons/LessonQuestions'
 import { LessonSidebar } from '@/components/lessons/LessonSidebar'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/ui/button'
@@ -28,6 +32,8 @@ const progressLoadErrorMessage =
   'Не вдалося завантажити прогрес курсу. Спробуйте повторити запит.'
 const completeLessonErrorMessage =
   'Не вдалося позначити урок як пройдений. Спробуйте ще раз.'
+const quizIncompleteMessage =
+  'Щоб завершити урок, дайте правильні відповіді на всі питання.'
 
 function parseRouteId(routeId: string | undefined): number | null {
   if (!routeId) {
@@ -166,6 +172,58 @@ function LessonSidebarSkeleton() {
   )
 }
 
+interface LessonCompletionControlProps {
+  isCompleted: boolean
+  isCompleting: boolean
+  isQuizLocked: boolean
+  onComplete: () => void
+}
+
+function LessonCompletionControl({
+  isCompleted,
+  isCompleting,
+  isQuizLocked,
+  onComplete,
+}: LessonCompletionControlProps) {
+  return (
+    <section className="rounded-xl border border-slate-800 bg-slate-900 px-5 py-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-cyan-300">Прогрес уроку</p>
+          <p className="text-sm leading-6 text-slate-400">
+            {isQuizLocked
+              ? quizIncompleteMessage
+              : 'Питання пройдено або в цьому уроці їх немає.'}
+          </p>
+        </div>
+
+        {isCompleted ? (
+          <div className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-200">
+            <CheckCircle className="size-4" aria-hidden="true" />
+            Урок завершено
+          </div>
+        ) : (
+          <Button
+            type="button"
+            className="bg-sky-500 text-slate-950 hover:bg-sky-400"
+            onClick={onComplete}
+            disabled={isCompleting || isQuizLocked}
+          >
+            {isCompleting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Зачекайте...
+              </>
+            ) : (
+              'Позначити як пройдений'
+            )}
+          </Button>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export function LessonPage() {
   const { courseId, lessonId } = useParams()
   const parsedCourseId = parseRouteId(courseId)
@@ -183,6 +241,11 @@ export function LessonPage() {
   const [progressError, setProgressError] = useState<string | null>(null)
   const [completeError, setCompleteError] = useState<string | null>(null)
   const [isNotEnrolled, setIsNotEnrolled] = useState(false)
+  const [lessonQuestionsStatus, setLessonQuestionsStatus] =
+    useState<LessonQuestionsStatus>({
+      hasQuestions: false,
+      allQuestionsCorrect: true,
+    })
 
   const modules = useMemo(() => getModules(syllabus), [syllabus])
   const orderedLessons = useMemo(() => flattenLessons(modules), [modules])
@@ -217,6 +280,10 @@ export function LessonPage() {
     setLesson(null)
     setLessonError(null)
     setCompleteError(null)
+    setLessonQuestionsStatus({
+      hasQuestions: false,
+      allQuestionsCorrect: true,
+    })
 
     try {
       const lessonData = await getLessonById(parsedLessonId)
@@ -429,6 +496,10 @@ export function LessonPage() {
         setLesson(null)
         setLessonError(null)
         setCompleteError(null)
+        setLessonQuestionsStatus({
+          hasQuestions: false,
+          allQuestionsCorrect: true,
+        })
         return getLessonById(parsedLessonId)
       })
       .then((lessonData) => {
@@ -481,6 +552,11 @@ export function LessonPage() {
 
       if (status === 403) {
         setIsNotEnrolled(true)
+        return
+      }
+
+      if (status === 409 && isNormalizedApiError(error)) {
+        setCompleteError(error.backendMessage || quizIncompleteMessage)
         return
       }
 
@@ -560,10 +636,20 @@ export function LessonPage() {
               !lessonError &&
               lesson ? (
                 <>
-                  <LessonContent
-                    lesson={lesson}
+                  <LessonContent lesson={lesson} />
+
+                  <LessonQuestions
+                    lessonId={parsedLessonId}
+                    onStatusChange={setLessonQuestionsStatus}
+                  />
+
+                  <LessonCompletionControl
                     isCompleted={isCurrentLessonCompleted}
                     isCompleting={isCompleting}
+                    isQuizLocked={
+                      lessonQuestionsStatus.hasQuestions &&
+                      !lessonQuestionsStatus.allQuestionsCorrect
+                    }
                     onComplete={handleCompleteLesson}
                   />
 

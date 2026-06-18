@@ -2,6 +2,7 @@ package questionCore
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -16,11 +17,13 @@ type QuestionRepository interface {
 	GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error)
 	QuestionOrderExists(ctx context.Context, lessonID int, orderNum int) (bool, error)
 	CheckStudentLessonAccess(ctx context.Context, userID int, lessonID int) error
-	GetStudentQuestionsByLessonID(ctx context.Context, lessonID int) (LessonQuestionsResponse, error)
+	GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error)
 	CheckQuestionExists(ctx context.Context, questionID int) error
 	CheckStudentQuestionAccess(ctx context.Context, userID int, questionID int) error
 	GetOptionCorrectness(ctx context.Context, questionID int, optionID int) (bool, error)
-	GetCorrectOptionID(ctx context.Context, questionID int) (int, error)
+	SaveQuestionAttempt(ctx context.Context, userID int, questionID int, selectedOptionID int, isCorrect bool) (QuestionUserAnswer, error)
+	GetQuestionLessonID(ctx context.Context, questionID int) (int, error)
+	AreAllLessonQuestionsCorrect(ctx context.Context, userID int, lessonID int) (bool, error)
 }
 
 type Repository struct {
@@ -167,14 +170,15 @@ func (r *Repository) CheckStudentLessonAccess(ctx context.Context, userID int, l
 	return nil
 }
 
-func (r *Repository) GetStudentQuestionsByLessonID(ctx context.Context, lessonID int) (LessonQuestionsResponse, error) {
+func (r *Repository) GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error) {
 	query := `
-		SELECT id, lesson_id, question_text, order_num
-		FROM lesson_questions
-		WHERE lesson_id = $1
-		ORDER BY order_num ASC, id ASC
+		SELECT q.id, q.lesson_id, q.question_text, q.order_num, a.selected_option_id, a.is_correct
+		FROM lesson_questions q
+		LEFT JOIN lesson_question_attempts a ON a.question_id = q.id AND a.user_id = $2
+		WHERE q.lesson_id = $1
+		ORDER BY q.order_num ASC, q.id ASC
 	`
-	rows, err := r.db.Query(ctx, query, lessonID)
+	rows, err := r.db.Query(ctx, query, lessonID, userID)
 	if err != nil {
 		slog.Error("GetStudentQuestions query error", "error", err)
 		return LessonQuestionsResponse{}, fmt.Errorf("student questions query error: %w", err)
@@ -186,10 +190,27 @@ func (r *Repository) GetStudentQuestionsByLessonID(ctx context.Context, lessonID
 	}
 	for rows.Next() {
 		var question StudentQuestionResponse
-		err := rows.Scan(&question.ID, &question.LessonID, &question.QuestionText, &question.OrderNum)
+		var selectedOptionID sql.NullInt64
+		var isCorrect sql.NullBool
+
+		err := rows.Scan(
+			&question.ID,
+			&question.LessonID,
+			&question.QuestionText,
+			&question.OrderNum,
+			&selectedOptionID,
+			&isCorrect,
+		)
 		if err != nil {
 			slog.Error("GetStudentQuestions scan error", "error", err)
 			return LessonQuestionsResponse{}, fmt.Errorf("student question scan error: %w", err)
+		}
+
+		if selectedOptionID.Valid && isCorrect.Valid {
+			question.UserAnswer = &QuestionUserAnswer{
+				SelectedOptionID: int(selectedOptionID.Int64),
+				IsCorrect:        isCorrect.Bool,
+			}
 		}
 
 		options, err := r.getStudentOptionsByQuestionID(ctx, question.ID)
@@ -204,6 +225,12 @@ func (r *Repository) GetStudentQuestionsByLessonID(ctx context.Context, lessonID
 	if err := rows.Err(); err != nil {
 		return LessonQuestionsResponse{}, fmt.Errorf("student questions rows error: %w", err)
 	}
+
+	allQuestionsCorrect, err := r.AreAllLessonQuestionsCorrect(ctx, userID, lessonID)
+	if err != nil {
+		return LessonQuestionsResponse{}, err
+	}
+	response.AllQuestionsCorrect = allQuestionsCorrect
 
 	return response, nil
 }
@@ -277,21 +304,88 @@ func (r *Repository) GetOptionCorrectness(ctx context.Context, questionID int, o
 	return isCorrect, nil
 }
 
-func (r *Repository) GetCorrectOptionID(ctx context.Context, questionID int) (int, error) {
-	var optionID int
+func (r *Repository) SaveQuestionAttempt(ctx context.Context, userID int, questionID int, selectedOptionID int, isCorrect bool) (QuestionUserAnswer, error) {
+	var savedAnswer QuestionUserAnswer
 	query := `
-		SELECT id
-		FROM lesson_question_options
-		WHERE question_id = $1 AND is_correct = true
+		INSERT INTO lesson_question_attempts (
+			user_id,
+			question_id,
+			selected_option_id,
+			is_correct,
+			answered_at
+		)
+		VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (user_id, question_id)
+		DO UPDATE SET
+			selected_option_id = CASE
+				WHEN lesson_question_attempts.is_correct = true
+				THEN lesson_question_attempts.selected_option_id
+				ELSE EXCLUDED.selected_option_id
+			END,
+			is_correct = lesson_question_attempts.is_correct OR EXCLUDED.is_correct,
+			answered_at = CASE
+				WHEN lesson_question_attempts.is_correct = true
+				THEN lesson_question_attempts.answered_at
+				ELSE EXCLUDED.answered_at
+			END
+		RETURNING selected_option_id, is_correct
 	`
 
-	err := r.db.QueryRow(ctx, query, questionID).Scan(&optionID)
+	err := r.db.QueryRow(ctx, query, userID, questionID, selectedOptionID, isCorrect).Scan(
+		&savedAnswer.SelectedOptionID,
+		&savedAnswer.IsCorrect,
+	)
 	if err != nil {
-		slog.Error("Get correct option ID error", "error", err)
-		return 0, fmt.Errorf("correct option query error: %w", err)
+		slog.Error("Save question attempt error", "error", err)
+		return QuestionUserAnswer{}, fmt.Errorf("question attempt save error: %w", err)
 	}
 
-	return optionID, nil
+	return savedAnswer, nil
+}
+
+func (r *Repository) GetQuestionLessonID(ctx context.Context, questionID int) (int, error) {
+	var lessonID int
+	query := `SELECT lesson_id FROM lesson_questions WHERE id = $1`
+
+	err := r.db.QueryRow(ctx, query, questionID).Scan(&lessonID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, ErrQuestionNotFound
+		}
+		slog.Error("Get question lesson ID error", "error", err)
+		return 0, fmt.Errorf("question lesson query error: %w", err)
+	}
+
+	return lessonID, nil
+}
+
+func (r *Repository) AreAllLessonQuestionsCorrect(ctx context.Context, userID int, lessonID int) (bool, error) {
+	var allQuestionsCorrect bool
+	query := `
+		SELECT
+			(
+				SELECT COUNT(*)
+				FROM lesson_questions
+				WHERE lesson_id = $1
+			)
+			=
+			(
+				SELECT COUNT(*)
+				FROM lesson_question_attempts qa
+				JOIN lesson_questions q ON qa.question_id = q.id
+				WHERE q.lesson_id = $1
+					AND qa.user_id = $2
+					AND qa.is_correct = true
+			) AS all_questions_correct
+	`
+
+	err := r.db.QueryRow(ctx, query, lessonID, userID).Scan(&allQuestionsCorrect)
+	if err != nil {
+		slog.Error("Check all lesson questions correct error", "error", err)
+		return false, fmt.Errorf("lesson questions correctness check error: %w", err)
+	}
+
+	return allQuestionsCorrect, nil
 }
 
 func (r *Repository) getOptionsByQuestionID(ctx context.Context, questionID int) ([]Option, error) {

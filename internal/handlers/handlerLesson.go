@@ -91,6 +91,11 @@ func (h *LessonHandler) CompleteLesson(c *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, lessonCore.ErrQuizNotComplete) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Спочатку дайте правильні відповіді на всі питання уроку"})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося зберегти прогрес"})
 		return
 	}

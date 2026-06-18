@@ -34,6 +34,7 @@ type StudentQuestionResponse struct {
 	QuestionText string                  `json:"question_text"`
 	OrderNum     int                     `json:"order_num"`
 	Options      []StudentOptionResponse `json:"options"`
+	UserAnswer   *QuestionUserAnswer     `json:"user_answer"`
 }
 
 type StudentOptionResponse struct {
@@ -44,7 +45,13 @@ type StudentOptionResponse struct {
 }
 
 type LessonQuestionsResponse struct {
-	Questions []StudentQuestionResponse `json:"questions"`
+	Questions           []StudentQuestionResponse `json:"questions"`
+	AllQuestionsCorrect bool                      `json:"all_questions_correct"`
+}
+
+type QuestionUserAnswer struct {
+	SelectedOptionID int  `json:"selected_option_id"`
+	IsCorrect        bool `json:"is_correct"`
 }
 
 type SubmitAnswerRequest struct {
@@ -52,8 +59,8 @@ type SubmitAnswerRequest struct {
 }
 
 type SubmitAnswerResponse struct {
-	QuestionID       int  `json:"question_id"`
-	SelectedOptionID int  `json:"selected_option_id"`
-	IsCorrect        bool `json:"is_correct"`
-	CorrectOptionID  *int `json:"correct_option_id"`
+	QuestionID          int  `json:"question_id"`
+	SelectedOptionID    int  `json:"selected_option_id"`
+	IsCorrect           bool `json:"is_correct"`
+	AllQuestionsCorrect bool `json:"all_questions_correct"`
 }
