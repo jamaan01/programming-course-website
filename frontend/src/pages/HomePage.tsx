@@ -46,7 +46,7 @@ async function fetchCourses(): Promise<Course[]> {
 function CoursesLoadingState() {
   return (
     <div
-      className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
       aria-label="Курси завантажуються"
     >
       {coursesSkeletonItems.map((item) => (
@@ -167,8 +167,8 @@ export function HomePage() {
   const hasCourses = courses.length > 0
 
   return (
-    <PageContainer>
-      <div className="space-y-8">
+    <PageContainer className="relative max-w-none overflow-hidden lg:mx-0">
+      <div className="relative z-10 max-w-[72rem] space-y-8 lg:pr-36 xl:pr-44 2xl:pr-0">
         <section className="max-w-3xl space-y-3">
           <p className="text-sm font-medium text-cyan-300">Каталог курсів</p>
           <h1 className="text-3xl font-semibold text-slate-100 sm:text-4xl">
@@ -191,7 +191,7 @@ export function HomePage() {
 
         {!isLoading && !errorMessage && hasCourses ? (
           <section
-            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
             aria-label="Список курсів"
           >
             {courses.map((course) => (
@@ -199,6 +199,18 @@ export function HomePage() {
             ))}
           </section>
         ) : null}
+      </div>
+
+      <div
+        className="pointer-events-none absolute right-4 top-1/2 z-0 hidden -translate-y-1/2 select-none lg:block xl:right-8"
+        aria-hidden="true"
+      >
+        <span
+          className="block text-[7rem] font-semibold uppercase leading-none text-slate-800/30 xl:text-[9rem] 2xl:text-[10rem]"
+          style={{ writingMode: 'vertical-rl' }}
+        >
+          GoLab
+        </span>
       </div>
     </PageContainer>
   )

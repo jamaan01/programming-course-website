@@ -26,7 +26,7 @@ export function Header() {
   }
 
   return (
-    <header className="border-b border-slate-800 bg-slate-950/95">
+    <header className="relative z-30 border-b border-slate-800 bg-slate-950/95 lg:hidden">
       <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <Link
           to="/"
