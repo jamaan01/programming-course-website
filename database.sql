@@ -1,11 +1,11 @@
 CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(50) NOT NULL,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
 
 CREATE TABLE IF NOT EXISTS courses (
     id SERIAL PRIMARY KEY,
@@ -14,101 +14,51 @@ CREATE TABLE IF NOT EXISTS courses (
     is_published BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE IF NOT EXISTS modules (
+    id SERIAL PRIMARY KEY,
+    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    order_num INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS lessons (
     id SERIAL PRIMARY KEY,
-    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE, 
-    section_name VARCHAR(255) DEFAULT 'Основи', 
+    module_id INTEGER NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
-    homework TEXT,
-    order_num INTEGER
+    order_num INTEGER NOT NULL DEFAULT 0
 );
 
-
-INSERT INTO lessons (course_id, section_name, title, content, homework, order_num) 
-VALUES 
-(1, 'Основи', 'Урок 1: Що таке програмування', 'Текст першого уроку...', 'Завдання 1', 1),
-(1, 'Основи', 'Урок 2: Перша програма', 'Текст другого уроку...', 'Завдання 2', 2),
-(1, 'Типи даних', 'Урок 3: Числа та рядки', 'Текст третього уроку...', 'Завдання 3', 3);
-
-
-CREATE TABLE modules (
-    id SERIAL PRIMARY KEY,
-    course_id INT REFERENCES courses(id) ON DELETE CASCADE, 
-    title VARCHAR(255) NOT NULL,
-    order_num INT 
-);
-
-CREATE TABLE lessons (
-    id SERIAL PRIMARY KEY,
-    module_id INT REFERENCES modules(id) ON DELETE CASCADE, 
-    title VARCHAR(255) NOT NULL,
-    content TEXT, 
-    video_url VARCHAR(255), 
-    order_num INT 
-);
-
-
-INSERT INTO modules (course_id, title, order_num) VALUES 
-(1, 'Модуль 1: Основи мови Go', 1),
-(1, 'Модуль 2: Робота з базами даних', 2);
-
-
-INSERT INTO lessons (module_id, title, content, order_num) VALUES 
-(1, 'Що таке Go і чому він такий крутий?', 'Текст про історію Go та його переваги...', 1),
-(1, 'Змінні та типи даних', 'Текст про var, int, string, bool...', 2);
-
-CREATE TABLE enrollments (
-    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    course_id INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-    enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS enrollments (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    enrolled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, course_id)
 );
 
-CREATE TABLE lesson_progress (
-    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    lesson_id INT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-    is_completed BOOLEAN DEFAULT false, 
-    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-    
+CREATE TABLE IF NOT EXISTS lesson_progress (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    is_completed BOOLEAN NOT NULL DEFAULT false,
+    completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, lesson_id)
 );
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user';
-
-ALTER TABLE courses ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT false;
-
 CREATE TABLE IF NOT EXISTS lesson_questions (
     id SERIAL PRIMARY KEY,
-    lesson_id INT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
-    order_num INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    order_num INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS lesson_question_options (
     id SERIAL PRIMARY KEY,
-    question_id INT NOT NULL REFERENCES lesson_questions(id) ON DELETE CASCADE,
+    question_id INTEGER NOT NULL REFERENCES lesson_questions(id) ON DELETE CASCADE,
     option_text TEXT NOT NULL,
     is_correct BOOLEAN NOT NULL DEFAULT false,
-    order_num INT NOT NULL DEFAULT 0
+    order_num INTEGER NOT NULL DEFAULT 0
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS one_correct_option_per_question
-ON lesson_question_options(question_id)
-WHERE is_correct = true;
-
-ALTER TABLE modules
-ADD CONSTRAINT modules_course_order_unique UNIQUE (course_id, order_num);
-
-ALTER TABLE lessons
-ADD CONSTRAINT lessons_module_order_unique UNIQUE (module_id, order_num);
-
-ALTER TABLE lesson_questions
-ADD CONSTRAINT lesson_questions_lesson_order_unique UNIQUE (lesson_id, order_num);
-
-ALTER TABLE lesson_question_options
-ADD CONSTRAINT lesson_question_options_question_order_unique UNIQUE (question_id, order_num);
 
 CREATE TABLE IF NOT EXISTS lesson_question_attempts (
     id SERIAL PRIMARY KEY,
@@ -116,6 +66,83 @@ CREATE TABLE IF NOT EXISTS lesson_question_attempts (
     question_id INTEGER NOT NULL REFERENCES lesson_questions(id) ON DELETE CASCADE,
     selected_option_id INTEGER NOT NULL REFERENCES lesson_question_options(id) ON DELETE CASCADE,
     is_correct BOOLEAN NOT NULL,
-    answered_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, question_id)
+    answered_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'modules_course_order_unique'
+    ) THEN
+        ALTER TABLE modules
+        ADD CONSTRAINT modules_course_order_unique UNIQUE (course_id, order_num);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'lessons_module_order_unique'
+    ) THEN
+        ALTER TABLE lessons
+        ADD CONSTRAINT lessons_module_order_unique UNIQUE (module_id, order_num);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'lesson_questions_lesson_order_unique'
+    ) THEN
+        ALTER TABLE lesson_questions
+        ADD CONSTRAINT lesson_questions_lesson_order_unique UNIQUE (lesson_id, order_num);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'lesson_question_options_question_order_unique'
+    ) THEN
+        ALTER TABLE lesson_question_options
+        ADD CONSTRAINT lesson_question_options_question_order_unique UNIQUE (question_id, order_num);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'lesson_question_attempts_user_question_unique'
+    ) THEN
+        ALTER TABLE lesson_question_attempts
+        ADD CONSTRAINT lesson_question_attempts_user_question_unique UNIQUE (user_id, question_id);
+    END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS one_correct_option_per_question
+ON lesson_question_options(question_id)
+WHERE is_correct = true;
+
+CREATE INDEX IF NOT EXISTS modules_course_id_idx
+ON modules(course_id);
+
+CREATE INDEX IF NOT EXISTS lessons_module_id_idx
+ON lessons(module_id);
+
+CREATE INDEX IF NOT EXISTS enrollments_course_id_idx
+ON enrollments(course_id);
+
+CREATE INDEX IF NOT EXISTS lesson_progress_lesson_id_idx
+ON lesson_progress(lesson_id);
+
+CREATE INDEX IF NOT EXISTS lesson_questions_lesson_id_idx
+ON lesson_questions(lesson_id);
+
+CREATE INDEX IF NOT EXISTS lesson_question_options_question_id_idx
+ON lesson_question_options(question_id);
+
+CREATE INDEX IF NOT EXISTS lesson_question_attempts_question_id_idx
+ON lesson_question_attempts(question_id);
+
+CREATE INDEX IF NOT EXISTS lesson_question_attempts_selected_option_id_idx
+ON lesson_question_attempts(selected_option_id);
