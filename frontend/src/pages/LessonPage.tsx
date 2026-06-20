@@ -575,7 +575,7 @@ export function LessonPage() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer width="wide">
       <div className="space-y-6">
         <Link
           to={`/courses/${parsedCourseId}`}
@@ -588,7 +588,7 @@ export function LessonPage() {
         {isNotEnrolled ? (
           <NotEnrolledState courseId={parsedCourseId} />
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+          <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,56rem)] xl:grid-cols-[18rem_minmax(0,60rem)]">
             <div className="order-2 lg:order-1">
               {isSyllabusLoading && !syllabus ? (
                 <LessonSidebarSkeleton />

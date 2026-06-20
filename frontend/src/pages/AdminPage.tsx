@@ -993,7 +993,7 @@ export function AdminPage() {
   const optionsErrorMessage = getOptionsValidationMessage(optionsError)
 
   return (
-    <PageContainer>
+    <PageContainer width="wide">
       <div className="space-y-8">
         <section className="max-w-3xl space-y-3">
           <p className="text-sm font-medium text-cyan-300">Контент</p>

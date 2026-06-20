@@ -167,7 +167,7 @@ export function HomePage() {
   const hasCourses = courses.length > 0
 
   return (
-    <PageContainer className="relative max-w-none overflow-hidden lg:mx-0">
+    <PageContainer width="full" className="relative overflow-hidden">
       <div className="relative z-10 max-w-[72rem] space-y-8 lg:pr-36 xl:pr-44 2xl:pr-0">
         <section className="max-w-3xl space-y-3">
           <p className="text-sm font-medium text-cyan-300">Каталог курсів</p>
