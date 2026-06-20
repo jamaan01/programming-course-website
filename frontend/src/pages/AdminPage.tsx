@@ -1364,6 +1364,11 @@ export function AdminPage() {
                     aria-invalid={Boolean(lessonForm.formState.errors.content)}
                     {...lessonForm.register('content')}
                   />
+                  <p className="text-xs leading-5 text-slate-500">
+                    Підтримується форматування: # Заголовок, **жирний**, `код`,
+                    блок коду через ```go, списки - або 1.,
+                    [посилання](https://...).
+                  </p>
                   {lessonForm.formState.errors.content ? (
                     <p className="text-sm text-rose-300">
                       {lessonForm.formState.errors.content.message}

@@ -1,3 +1,4 @@
+import { FormattedLessonContent } from '@/components/lessons/FormattedLessonContent'
 import type { Lesson } from '@/types/api'
 
 interface LessonContentProps {
@@ -20,9 +21,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
 
       <div className="px-5 py-6">
         {content ? (
-          <div className="whitespace-pre-wrap break-words text-base leading-8 text-slate-300">
-            {content}
-          </div>
+          <FormattedLessonContent content={content} />
         ) : (
           <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-6 text-sm text-slate-400">
             У цьому уроці поки немає контенту.

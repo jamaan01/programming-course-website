@@ -1,19 +1,23 @@
 const footerLinks = [
   {
-    label: 'your-email@example.com',
-    href: 'mailto:your-email@example.com',
+    label: '+380 97 622 0809',
+    href: 'tel:+380976220809',
+  },
+  {
+    label: 'goschoolgolab@gmail.com',
+    href: 'mailto:goschoolgolab@gmail.com',
   },
   {
     label: 'Telegram',
-    href: 'https://t.me/your-profile',
+    href: 'https://t.me/golab_ua',
   },
   {
     label: 'Instagram',
-    href: 'https://instagram.com/your-profile',
+    href: 'https://www.instagram.com/golab.ua?igsh=ZHlkeTBpaGFhZ3hq',
   },
   {
     label: 'YouTube',
-    href: 'https://youtube.com/@your-channel',
+    href: 'https://www.youtube.com/@GOLAB_ua',
   },
 ]
 
@@ -23,9 +27,6 @@ export function Footer() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-5 text-sm text-slate-500 sm:px-6 lg:mx-0 lg:max-w-[78rem] lg:px-8 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="font-medium text-slate-300">Контакти</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Тимчасові посилання для релізної демонстрації.
-          </p>
         </div>
 
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-2">

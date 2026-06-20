@@ -46,7 +46,7 @@ async function fetchCourses(): Promise<Course[]> {
 function CoursesLoadingState() {
   return (
     <div
-      className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+      className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3"
       aria-label="Курси завантажуються"
     >
       {coursesSkeletonItems.map((item) => (
@@ -104,6 +104,31 @@ function CoursesEmptyState() {
         Наразі курсів немає, але вони скоро зʼявляться.
       </p>
     </div>
+  )
+}
+
+function HomeReleaseCard() {
+  return (
+    <aside className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-sky-950/20 xl:sticky xl:top-8">
+      <div className="mb-4 h-1 w-16 rounded-full bg-cyan-400" />
+      <p className="text-sm font-medium text-cyan-300">Оновлення</p>
+
+      <h2 className="mt-3 text-xl font-semibold leading-tight text-slate-100">
+        Версія 1.0
+      </h2>
+      <p className="mt-1 text-sm font-medium text-slate-200">
+        Перший запуск GoLab
+      </p>
+      <p className="mt-4 text-sm leading-7 text-slate-300">
+        Ми раді оголосити про запуск передової платформи для освоєння мови Go.
+        Наш продукт встановлює нову планку на освітньому ринку. Ми запакували
+        глибоку експертизу в кристально зрозумілі уроки, впровадили розумну
+        систему відстеження прогресу та створили потужний модуль перевірки
+        знань, що симулює реальні робочі завдання. Це найкоротший,
+        ефективніший і якісніший шлях від новачка до затребуваного інженера з
+        високим доходом. Приєднуйтесь до лідерів!
+      </p>
+    </aside>
   )
 }
 
@@ -167,50 +192,44 @@ export function HomePage() {
   const hasCourses = courses.length > 0
 
   return (
-    <PageContainer width="full" className="relative overflow-hidden">
-      <div className="relative z-10 max-w-[72rem] space-y-8 lg:pr-36 xl:pr-44 2xl:pr-0">
-        <section className="max-w-3xl space-y-3">
-          <p className="text-sm font-medium text-cyan-300">Каталог курсів</p>
-          <h1 className="text-3xl font-semibold text-slate-100 sm:text-4xl">
-            Курси програмування
-          </h1>
-          <p className="text-base leading-7 text-slate-400">
-            Оберіть курс і переходьте до навчання у зручному темпі.
-          </p>
-        </section>
-
-        {isLoading ? <CoursesLoadingState /> : null}
-
-        {!isLoading && errorMessage ? (
-          <CoursesErrorState message={errorMessage} onRetry={loadCourses} />
-        ) : null}
-
-        {!isLoading && !errorMessage && !hasCourses ? (
-          <CoursesEmptyState />
-        ) : null}
-
-        {!isLoading && !errorMessage && hasCourses ? (
-          <section
-            className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
-            aria-label="Список курсів"
-          >
-            {courses.map((course) => (
-              <CourseCard key={course.id} course={course} />
-            ))}
+    <PageContainer width="full">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-12 2xl:gap-16">
+        <div className="min-w-0 max-w-[72rem] space-y-8">
+          <section className="max-w-3xl space-y-3">
+            <p className="text-sm font-medium text-cyan-300">Каталог курсів</p>
+            <h1 className="text-3xl font-semibold text-slate-100 sm:text-4xl">
+              Курси програмування
+            </h1>
+            <p className="text-base leading-7 text-slate-400">
+              Оберіть курс і переходьте до навчання у зручному темпі.
+            </p>
           </section>
-        ) : null}
-      </div>
 
-      <div
-        className="pointer-events-none absolute right-4 top-1/2 z-0 hidden -translate-y-1/2 select-none lg:block xl:right-8"
-        aria-hidden="true"
-      >
-        <span
-          className="block text-[7rem] font-semibold uppercase leading-none text-slate-800/30 xl:text-[9rem] 2xl:text-[10rem]"
-          style={{ writingMode: 'vertical-rl' }}
-        >
-          GoLab
-        </span>
+          {isLoading ? <CoursesLoadingState /> : null}
+
+          {!isLoading && errorMessage ? (
+            <CoursesErrorState message={errorMessage} onRetry={loadCourses} />
+          ) : null}
+
+          {!isLoading && !errorMessage && !hasCourses ? (
+            <CoursesEmptyState />
+          ) : null}
+
+          {!isLoading && !errorMessage && hasCourses ? (
+            <section
+              className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3"
+              aria-label="Список курсів"
+            >
+              {courses.map((course) => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </section>
+          ) : null}
+        </div>
+
+        <div className="w-full xl:w-[22rem] xl:justify-self-end">
+          <HomeReleaseCard />
+        </div>
       </div>
     </PageContainer>
   )
