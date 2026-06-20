@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -18,11 +19,31 @@ func init() {
 		os.Exit(1)
 	}
 
-	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	ctx := context.Background()
+	config, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+	if err != nil {
+		slog.Error("Failed to parse PostgreSQL pool config", "error", err)
+		os.Exit(1)
+	}
+
+	config.MaxConns = 20
+	config.MinConns = 2
+	config.MaxConnLifetime = time.Hour
+	config.MaxConnIdleTime = 30 * time.Minute
+	config.HealthCheckPeriod = time.Minute
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		slog.Error("No connect pgsl", "error", err)
 		os.Exit(1)
 	}
+
+	if err := pool.Ping(ctx); err != nil {
+		slog.Error("PostgreSQL ping failed", "error", err)
+		pool.Close()
+		os.Exit(1)
+	}
+
 	Pool = pool
 }
 

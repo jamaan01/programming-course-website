@@ -35,6 +35,7 @@ func main() {
 
 	r := gin.Default()
 
+	r.Use(middlewear.BodySizeLimit())
 	r.Use(middlewear.SetupCORS())
 
 	authGroup := r.Group("/auth")
