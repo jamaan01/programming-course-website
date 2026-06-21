@@ -78,8 +78,12 @@ func main() {
 			adminGroup.GET("/lessons/:id/questions", questionHandler.GetQuestionsByLessonID)
 		}
 	}
-	err := r.Run(":8080")
-	if err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	if err := r.Run(":" + port); err != nil {
 		slog.Error("Server startup failed", "error", err)
 		os.Exit(1)
 	}

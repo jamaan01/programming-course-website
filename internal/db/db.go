@@ -13,14 +13,18 @@ import (
 var Pool *pgxpool.Pool
 
 func init() {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		slog.Error("Error loading .env file", "error", err)
+	if err := godotenv.Load("../../.env"); err != nil {
+		slog.Info("No .env file loaded; using process environment")
+	}
+
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		slog.Error("DATABASE_URL is required")
 		os.Exit(1)
 	}
 
 	ctx := context.Background()
-	config, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		slog.Error("Failed to parse PostgreSQL pool config", "error", err)
 		os.Exit(1)

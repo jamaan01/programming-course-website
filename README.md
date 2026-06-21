@@ -46,6 +46,8 @@ Copy-Item .env.example .env
 ```env
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/kursovaia?sslmode=disable
 SEKRETKEY_JWT=change-me
+PORT=8080
+FRONTEND_ORIGIN=http://localhost:5173
 ```
 
 Do not commit the real `.env`.
@@ -58,7 +60,7 @@ go mod download
 
 6. Start the backend from `cmd/api`.
 
-The current backend loads `.env` with `../../.env`, so use this command:
+The backend loads `.env` from the project root when it is available. If `.env` is not available, it uses process environment variables instead:
 
 ```powershell
 cd cmd/api
@@ -116,6 +118,46 @@ npm run preview
 ```
 
 After `npm run preview`, manually click through the main pages. A successful build does not guarantee runtime routing, auth state, or API calls.
+
+## Deployment Notes
+
+For Render/Railway-like hosting, keep secrets in the hosting dashboard environment variables, not in committed files.
+
+Backend environment variables:
+
+```env
+DATABASE_URL=postgres://...
+SEKRETKEY_JWT=replace-with-a-strong-secret
+PORT=8080
+FRONTEND_ORIGIN=https://your-frontend-domain
+```
+
+`PORT` is usually provided by the hosting platform. If it is missing locally, the backend falls back to `8080`.
+
+Frontend environment variable:
+
+```env
+VITE_API_BASE_URL=https://your-backend-domain
+```
+
+`VITE_API_BASE_URL` must be set at frontend build time.
+
+Render deployment outline:
+
+1. Create a managed PostgreSQL database.
+2. Create the backend as a Web Service and set backend environment variables.
+3. Keep backend and database in the same region when possible.
+4. Apply `database.sql` to the production database.
+5. Create the frontend as a Static Site and set `VITE_API_BASE_URL`.
+6. Set `FRONTEND_ORIGIN` to the exact deployed frontend origin, without a trailing path.
+7. Register the first user.
+8. Make that user admin with SQL:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'your-email@example.com';
+```
+
+9. Log in again and create production course content through the admin panel.
 
 ## Make User Admin
 
