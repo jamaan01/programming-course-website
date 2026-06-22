@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import {
   CheckCircle2,
   Loader2,
+  Pencil,
   Plus,
   RefreshCw,
   X,
@@ -30,10 +31,17 @@ import {
   getAdminCourseSyllabus,
   getAdminCourses,
   getAdminLessonQuestions,
+  updateAdminCourse,
   updateAdminCoursePublishStatus,
+  updateAdminLesson,
+  updateAdminModule,
+  updateAdminQuestion,
+  updateAdminQuestionCorrectOption,
+  updateAdminQuestionOption,
 } from '@/services/adminService'
 import type {
   AdminQuestion,
+  AdminQuestionOption,
   Course,
   CourseLesson,
   CourseModule,
@@ -149,6 +157,32 @@ type ModuleFormValues = z.infer<typeof moduleSchema>
 type LessonFormValues = z.infer<typeof lessonSchema>
 type QuestionFormValues = z.infer<typeof questionSchema>
 
+type EditTarget =
+  | { kind: 'course'; course: Course }
+  | { kind: 'module'; module: CourseModule }
+  | { kind: 'lesson'; lesson: CourseLesson }
+  | { kind: 'question'; question: AdminQuestion }
+  | { kind: 'option'; question: AdminQuestion; option: AdminQuestionOption }
+  | { kind: 'correctOption'; question: AdminQuestion }
+
+interface EditFormValues {
+  title: string
+  description: string
+  content: string
+  questionText: string
+  optionText: string
+  optionId: string
+}
+
+const emptyEditValues: EditFormValues = {
+  title: '',
+  description: '',
+  content: '',
+  questionText: '',
+  optionText: '',
+  optionId: '',
+}
+
 const defaultQuestionOptions = () => [
   {
     option_text: '',
@@ -179,6 +213,14 @@ function hasOrderNumber(items: OrderedItem[], orderNum: number | undefined) {
     typeof orderNum === 'number' &&
     Number.isFinite(orderNum) &&
     items.some((item) => item.order_num === orderNum)
+  )
+}
+
+function isQuestionEditTarget(target: EditTarget) {
+  return (
+    target.kind === 'question' ||
+    target.kind === 'option' ||
+    target.kind === 'correctOption'
   )
 }
 
@@ -342,6 +384,257 @@ function ErrorBlock({ title, message, onRetry }: ErrorBlockProps) {
   )
 }
 
+interface EditContentModalProps {
+  target: EditTarget | null
+  values: EditFormValues
+  error: string | null
+  isSaving: boolean
+  onChange: (values: EditFormValues) => void
+  onClose: () => void
+  onSubmit: () => void
+}
+
+function getEditModalTitle(target: EditTarget) {
+  switch (target.kind) {
+    case 'course':
+      return 'Редагувати курс'
+    case 'module':
+      return 'Редагувати модуль'
+    case 'lesson':
+      return 'Редагувати урок'
+    case 'question':
+      return 'Редагувати питання'
+    case 'option':
+      return 'Редагувати варіант'
+    case 'correctOption':
+      return 'Правильна відповідь'
+  }
+}
+
+function EditContentModal({
+  target,
+  values,
+  error,
+  isSaving,
+  onChange,
+  onClose,
+  onSubmit,
+}: EditContentModalProps) {
+  if (!target) {
+    return null
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="admin-edit-title"
+    >
+      <form
+        className="max-h-[90svh] w-full max-w-2xl overflow-y-auto rounded-xl border border-slate-800 bg-slate-900 p-5 text-slate-100 shadow-2xl shadow-slate-950/60"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onSubmit()
+        }}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-cyan-300">Редагування</p>
+            <h2 id="admin-edit-title" className="mt-1 text-xl font-semibold">
+              {getEditModalTitle(target)}
+            </h2>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+            disabled={isSaving}
+            onClick={onClose}
+            aria-label="Закрити"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          {target.kind === 'course' ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-course-title" className="text-slate-200">
+                  Назва курсу
+                </Label>
+                <Input
+                  id="edit-course-title"
+                  className={controlClass}
+                  disabled={isSaving}
+                  value={values.title}
+                  onChange={(event) =>
+                    onChange({ ...values, title: event.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-course-description"
+                  className="text-slate-200"
+                >
+                  Опис курсу
+                </Label>
+                <textarea
+                  id="edit-course-description"
+                  className={textareaClass}
+                  disabled={isSaving}
+                  value={values.description}
+                  onChange={(event) =>
+                    onChange({ ...values, description: event.target.value })
+                  }
+                />
+              </div>
+            </>
+          ) : null}
+
+          {target.kind === 'module' ? (
+            <div className="space-y-2">
+              <Label htmlFor="edit-module-title" className="text-slate-200">
+                Назва модуля
+              </Label>
+              <Input
+                id="edit-module-title"
+                className={controlClass}
+                disabled={isSaving}
+                value={values.title}
+                onChange={(event) =>
+                  onChange({ ...values, title: event.target.value })
+                }
+              />
+            </div>
+          ) : null}
+
+          {target.kind === 'lesson' ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-lesson-title" className="text-slate-200">
+                  Назва уроку
+                </Label>
+                <Input
+                  id="edit-lesson-title"
+                  className={controlClass}
+                  disabled={isSaving}
+                  value={values.title}
+                  onChange={(event) =>
+                    onChange({ ...values, title: event.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-lesson-content" className="text-slate-200">
+                  Контент уроку
+                </Label>
+                <textarea
+                  id="edit-lesson-content"
+                  className="min-h-64 w-full rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isSaving}
+                  value={values.content}
+                  onChange={(event) =>
+                    onChange({ ...values, content: event.target.value })
+                  }
+                />
+              </div>
+            </>
+          ) : null}
+
+          {target.kind === 'question' ? (
+            <div className="space-y-2">
+              <Label htmlFor="edit-question-text" className="text-slate-200">
+                Текст питання
+              </Label>
+              <textarea
+                id="edit-question-text"
+                className="min-h-32 w-full rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isSaving}
+                value={values.questionText}
+                onChange={(event) =>
+                  onChange({ ...values, questionText: event.target.value })
+                }
+              />
+            </div>
+          ) : null}
+
+          {target.kind === 'option' ? (
+            <div className="space-y-2">
+              <Label htmlFor="edit-option-text" className="text-slate-200">
+                Текст варіанта
+              </Label>
+              <Input
+                id="edit-option-text"
+                className={controlClass}
+                disabled={isSaving}
+                value={values.optionText}
+                onChange={(event) =>
+                  onChange({ ...values, optionText: event.target.value })
+                }
+              />
+            </div>
+          ) : null}
+
+          {target.kind === 'correctOption' ? (
+            <div className="space-y-2">
+              <Label htmlFor="edit-correct-option" className="text-slate-200">
+                Правильний варіант
+              </Label>
+              <select
+                id="edit-correct-option"
+                className={selectClass}
+                disabled={isSaving}
+                value={values.optionId}
+                onChange={(event) =>
+                  onChange({ ...values, optionId: event.target.value })
+                }
+              >
+                {target.question.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.option_text}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+            disabled={isSaving}
+            onClick={onClose}
+          >
+            Скасувати
+          </Button>
+          <Button
+            type="submit"
+            className="bg-sky-500 text-slate-950 hover:bg-sky-400"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Збереження...
+              </>
+            ) : (
+              'Зберегти'
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 function CourseListSkeleton() {
   return (
     <div className="space-y-3">
@@ -365,6 +658,7 @@ interface CourseListProps {
   error: string | null
   publishingIds: Set<number>
   onRetry: () => void
+  onEditCourse: (course: Course) => void
   onTogglePublish: (course: Course) => void
 }
 
@@ -374,6 +668,7 @@ function CourseList({
   error,
   publishingIds,
   onRetry,
+  onEditCourse,
   onTogglePublish,
 }: CourseListProps) {
   if (isLoading) {
@@ -430,6 +725,16 @@ function CourseList({
                 </p>
               </div>
 
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                  onClick={() => onEditCourse(course)}
+                >
+                  <Pencil className="size-4" aria-hidden="true" />
+                  Редагувати
+                </Button>
               <Button
                 type="button"
                 className={
@@ -452,6 +757,7 @@ function CourseList({
                   'Опублікувати'
                 )}
               </Button>
+              </div>
             </div>
           </div>
         )
@@ -493,6 +799,11 @@ export function AdminPage() {
   const [lessonError, setLessonError] = useState<string | null>(null)
   const [questionSuccess, setQuestionSuccess] = useState<string | null>(null)
   const [questionError, setQuestionError] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
+  const [editValues, setEditValues] =
+    useState<EditFormValues>(emptyEditValues)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [isEditSaving, setIsEditSaving] = useState(false)
 
   const courseForm = useForm<CourseFormValues>({
     resolver: zodResolver(courseSchema),
@@ -593,7 +904,10 @@ export function AdminPage() {
     }
   }, [])
 
-  const loadQuestions = useCallback(async (lessonId: number) => {
+  const loadQuestions = useCallback(async (
+    lessonId: number,
+    shouldThrow = false,
+  ) => {
     setIsQuestionsLoading(true)
     setQuestionsError(null)
 
@@ -610,6 +924,9 @@ export function AdminPage() {
           'Не вдалося завантажити питання уроку.',
         ),
       )
+      if (shouldThrow) {
+        throw error
+      }
     } finally {
       setIsQuestionsLoading(false)
     }
@@ -784,6 +1101,166 @@ export function AdminPage() {
     replace(nextOptions)
     setQuestionError(null)
     void questionForm.trigger('options')
+  }
+
+  function closeEditModal() {
+    if (isEditSaving) {
+      return
+    }
+
+    setEditTarget(null)
+    setEditValues(emptyEditValues)
+    setEditError(null)
+  }
+
+  function openEditModal(target: EditTarget) {
+    setEditTarget(target)
+    setEditError(null)
+
+    if (target.kind === 'course') {
+      setEditValues({
+        ...emptyEditValues,
+        title: target.course.title,
+        description: target.course.description,
+      })
+      return
+    }
+
+    if (target.kind === 'module') {
+      setEditValues({
+        ...emptyEditValues,
+        title: target.module.title,
+      })
+      return
+    }
+
+    if (target.kind === 'lesson') {
+      setEditValues({
+        ...emptyEditValues,
+        title: target.lesson.title,
+        content: target.lesson.content ?? '',
+      })
+      return
+    }
+
+    if (target.kind === 'question') {
+      setEditValues({
+        ...emptyEditValues,
+        questionText: target.question.question_text,
+      })
+      return
+    }
+
+    if (target.kind === 'option') {
+      setEditValues({
+        ...emptyEditValues,
+        optionText: target.option.option_text,
+      })
+      return
+    }
+
+    const currentCorrectOption = target.question.options.find(
+      (option) => option.is_correct,
+    )
+
+    setEditValues({
+      ...emptyEditValues,
+      optionId: String(currentCorrectOption?.id ?? target.question.options[0]?.id ?? ''),
+    })
+  }
+
+  async function reloadAdminDataAfterEdit(target: EditTarget) {
+    if (target.kind === 'course') {
+      await loadCourses()
+      if (selectedCourseId === target.course.id) {
+        await loadSyllabus(target.course.id)
+      }
+      return
+    }
+
+    if (
+      target.kind === 'module' ||
+      target.kind === 'lesson'
+    ) {
+      if (selectedCourseId) {
+        await loadSyllabus(selectedCourseId)
+      }
+      return
+    }
+
+    if (isQuestionEditTarget(target)) {
+      if (selectedQuestionLessonId) {
+        await loadQuestions(selectedQuestionLessonId, true)
+      }
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!editTarget) {
+      return
+    }
+
+    setEditError(null)
+    setIsEditSaving(true)
+
+    let isPatchCompleted = false
+
+    try {
+      if (editTarget.kind === 'course') {
+        await updateAdminCourse(editTarget.course.id, {
+          title: editValues.title.trim(),
+          description: editValues.description.trim(),
+        })
+      } else if (editTarget.kind === 'module') {
+        await updateAdminModule(editTarget.module.id, {
+          title: editValues.title.trim(),
+        })
+      } else if (editTarget.kind === 'lesson') {
+        await updateAdminLesson(editTarget.lesson.id, {
+          title: editValues.title.trim(),
+          content: editValues.content.trim(),
+        })
+      } else if (editTarget.kind === 'question') {
+        await updateAdminQuestion(editTarget.question.id, {
+          question_text: editValues.questionText.trim(),
+        })
+      } else if (editTarget.kind === 'option') {
+        await updateAdminQuestionOption(editTarget.option.id, {
+          option_text: editValues.optionText.trim(),
+        })
+      } else {
+        const optionId = parseSelectNumber(editValues.optionId)
+        if (!optionId) {
+          setEditError('Оберіть правильний варіант.')
+          return
+        }
+
+        await updateAdminQuestionCorrectOption(editTarget.question.id, {
+          option_id: optionId,
+        })
+      }
+
+      isPatchCompleted = true
+      await reloadAdminDataAfterEdit(editTarget)
+      setEditTarget(null)
+      setEditValues(emptyEditValues)
+    } catch (error) {
+      if (isPatchCompleted && isQuestionEditTarget(editTarget)) {
+        setEditError(
+          'Зміни збережено, але не вдалося оновити питання. Спробуйте ще раз.',
+        )
+        return
+      }
+
+      setEditError(
+        getAdminErrorMessage(
+          error,
+          'Не вдалося зберегти зміни. Спробуйте ще раз.',
+        ),
+      )
+    } finally {
+      setIsEditSaving(false)
+    }
   }
 
   async function handleTogglePublish(course: Course) {
@@ -1037,6 +1514,7 @@ export function AdminPage() {
                 error={coursesError}
                 publishingIds={publishingIds}
                 onRetry={loadCourses}
+                onEditCourse={(course) => openEditModal({ kind: 'course', course })}
                 onTogglePublish={handleTogglePublish}
               />
               <div className="flex flex-wrap items-center gap-4">
@@ -1799,6 +2277,18 @@ export function AdminPage() {
                         <p className="font-medium text-slate-100">
                           {module.title}
                         </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                          onClick={() =>
+                            openEditModal({ kind: 'module', module })
+                          }
+                        >
+                          <Pencil className="size-4" aria-hidden="true" />
+                          Редагувати
+                        </Button>
                         <Badge
                           variant="outline"
                           className="border-slate-700 text-slate-300"
@@ -1812,6 +2302,40 @@ export function AdminPage() {
                           {module.lessons?.length ?? 0}
                         </span>
                       </p>
+                      {module.lessons && module.lessons.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {sortLessons(module.lessons).map((lesson) => (
+                            <div
+                              key={lesson.id}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-slate-200">
+                                  {lesson.title}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  #{lesson.order_num}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                                onClick={() =>
+                                  openEditModal({ kind: 'lesson', lesson })
+                                }
+                              >
+                                <Pencil
+                                  className="size-4"
+                                  aria-hidden="true"
+                                />
+                                Редагувати
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -1874,6 +2398,34 @@ export function AdminPage() {
                         <p className="font-medium text-slate-100">
                           {question.question_text}
                         </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                            onClick={() =>
+                              openEditModal({ kind: 'question', question })
+                            }
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                            Редагувати
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                            onClick={() =>
+                              openEditModal({
+                                kind: 'correctOption',
+                                question,
+                              })
+                            }
+                          >
+                            Правильна відповідь
+                          </Button>
+                        </div>
                         <Badge
                           variant="outline"
                           className="border-slate-700 text-slate-300"
@@ -1887,6 +2439,44 @@ export function AdminPage() {
                           {question.options.length}
                         </span>
                       </p>
+                      <div className="mt-3 space-y-2">
+                        {question.options.map((option) => (
+                          <div
+                            key={option.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm text-slate-200">
+                                {option.option_text}
+                              </p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                <span>#{option.order_num}</span>
+                                {option.is_correct ? (
+                                  <span className="text-emerald-300">
+                                    Правильна
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                              onClick={() =>
+                                openEditModal({
+                                  kind: 'option',
+                                  question,
+                                  option,
+                                })
+                              }
+                            >
+                              <Pencil className="size-4" aria-hidden="true" />
+                              Редагувати
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1895,6 +2485,15 @@ export function AdminPage() {
           </Card>
         </section>
       </div>
+      <EditContentModal
+        target={editTarget}
+        values={editValues}
+        error={editError}
+        isSaving={isEditSaving}
+        onChange={setEditValues}
+        onClose={closeEditModal}
+        onSubmit={handleSaveEdit}
+      />
     </PageContainer>
   )
 }

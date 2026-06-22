@@ -1,6 +1,9 @@
 package courseCore
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type CourseService interface {
 	GetAllCourses(ctx context.Context) ([]Course, error)
@@ -10,6 +13,9 @@ type CourseService interface {
 	GetCourseByIDAdmin(ctx context.Context, id int) (Course, error)
 	GetCourseSyllabusAdmin(ctx context.Context, id int) (Course, error)
 	UpdateCoursePublishStatus(ctx context.Context, id int, isPublished bool) error
+	UpdateCourse(ctx context.Context, id int, req UpdateCourseRequest) error
+	UpdateModule(ctx context.Context, id int, req UpdateModuleRequest) error
+	UpdateLesson(ctx context.Context, id int, req UpdateLessonRequest) error
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
 	CreateCourse(ctx context.Context, req CreateCourseRequest) (int, error)
@@ -51,6 +57,35 @@ func (s *Service) GetCourseSyllabusAdmin(ctx context.Context, id int) (Course, e
 
 func (s *Service) UpdateCoursePublishStatus(ctx context.Context, id int, isPublished bool) error {
 	return s.repo.UpdateCoursePublishStatus(ctx, id, isPublished)
+}
+
+func (s *Service) UpdateCourse(ctx context.Context, id int, req UpdateCourseRequest) error {
+	title := strings.TrimSpace(req.Title)
+	description := strings.TrimSpace(req.Description)
+	if title == "" || description == "" {
+		return ErrInvalidCourseContent
+	}
+
+	return s.repo.UpdateCourse(ctx, id, title, description)
+}
+
+func (s *Service) UpdateModule(ctx context.Context, id int, req UpdateModuleRequest) error {
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		return ErrInvalidCourseContent
+	}
+
+	return s.repo.UpdateModule(ctx, id, title)
+}
+
+func (s *Service) UpdateLesson(ctx context.Context, id int, req UpdateLessonRequest) error {
+	title := strings.TrimSpace(req.Title)
+	content := strings.TrimSpace(req.Content)
+	if title == "" || content == "" {
+		return ErrInvalidCourseContent
+	}
+
+	return s.repo.UpdateLesson(ctx, id, title, content)
 }
 
 func (s *Service) EnrollUser(ctx context.Context, userID int, courseID int) error {

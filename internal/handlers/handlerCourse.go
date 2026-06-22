@@ -192,6 +192,99 @@ func (h *CourseHandler) UpdateCoursePublishStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Статус курсу оновлено", "is_published": *req.IsPublished})
 }
 
+func (h *CourseHandler) UpdateCourse(c *gin.Context) {
+	id, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req courseCore.UpdateCourseRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних", "details": err.Error()})
+		return
+	}
+
+	err := h.service.UpdateCourse(c.Request.Context(), id, req)
+	if err != nil {
+		if errors.Is(err, courseCore.ErrInvalidCourseContent) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Перевірте введені дані"})
+			return
+		}
+
+		if errors.Is(err, courseCore.ErrCourseNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Курс не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося оновити курс"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Курс оновлено"})
+}
+
+func (h *CourseHandler) UpdateModule(c *gin.Context) {
+	id, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req courseCore.UpdateModuleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних", "details": err.Error()})
+		return
+	}
+
+	err := h.service.UpdateModule(c.Request.Context(), id, req)
+	if err != nil {
+		if errors.Is(err, courseCore.ErrInvalidCourseContent) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Перевірте введені дані"})
+			return
+		}
+
+		if errors.Is(err, courseCore.ErrModuleNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Модуль не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося оновити модуль"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Модуль оновлено"})
+}
+
+func (h *CourseHandler) UpdateLesson(c *gin.Context) {
+	id, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req courseCore.UpdateLessonRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних", "details": err.Error()})
+		return
+	}
+
+	err := h.service.UpdateLesson(c.Request.Context(), id, req)
+	if err != nil {
+		if errors.Is(err, courseCore.ErrInvalidCourseContent) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Перевірте введені дані"})
+			return
+		}
+
+		if errors.Is(err, courseCore.ErrLessonNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Урок не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося оновити урок"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Урок оновлено"})
+}
+
 func (h *CourseHandler) CreateCourse(c *gin.Context) {
 	var req courseCore.CreateCourseRequest
 

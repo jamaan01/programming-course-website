@@ -1,5 +1,11 @@
 import { apiClient } from '@/services/apiClient'
 import type {
+  AdminUpdateCorrectOptionPayload,
+  AdminUpdateCoursePayload,
+  AdminUpdateLessonPayload,
+  AdminUpdateModulePayload,
+  AdminUpdateQuestionOptionPayload,
+  AdminUpdateQuestionPayload,
   AdminQuestion,
   Course,
   CreateCourseRequest,
@@ -10,6 +16,7 @@ import type {
   CreateModuleResponse,
   CreateQuestionRequest,
   CreateQuestionResponse,
+  MessageResponse,
   UpdateCoursePublishRequest,
   UpdateCoursePublishResponse,
 } from '@/types/api'
@@ -81,6 +88,78 @@ export async function updateAdminCoursePublishStatus(
 
   const { data } = await apiClient.patch<UpdateCoursePublishResponse>(
     `/api/admin/courses/${courseId}/publish`,
+    payload,
+  )
+
+  return data
+}
+
+export async function updateAdminCourse(
+  courseId: number,
+  payload: AdminUpdateCoursePayload,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.patch<MessageResponse>(
+    `/api/admin/courses/${courseId}`,
+    payload,
+  )
+
+  return data
+}
+
+export async function updateAdminModule(
+  moduleId: number,
+  payload: AdminUpdateModulePayload,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.patch<MessageResponse>(
+    `/api/admin/modules/${moduleId}`,
+    payload,
+  )
+
+  return data
+}
+
+export async function updateAdminLesson(
+  lessonId: number,
+  payload: AdminUpdateLessonPayload,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.patch<MessageResponse>(
+    `/api/admin/lessons/${lessonId}`,
+    payload,
+  )
+
+  return data
+}
+
+export async function updateAdminQuestion(
+  questionId: number,
+  payload: AdminUpdateQuestionPayload,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.patch<MessageResponse>(
+    `/api/admin/questions/${questionId}`,
+    payload,
+  )
+
+  return data
+}
+
+export async function updateAdminQuestionOption(
+  optionId: number,
+  payload: AdminUpdateQuestionOptionPayload,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.patch<MessageResponse>(
+    `/api/admin/question-options/${optionId}`,
+    payload,
+  )
+
+  return data
+}
+
+export async function updateAdminQuestionCorrectOption(
+  questionId: number,
+  payload: AdminUpdateCorrectOptionPayload,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.patch<MessageResponse>(
+    `/api/admin/questions/${questionId}/correct-option`,
     payload,
   )
 

@@ -18,6 +18,9 @@ var ErrDuplicateOrderNum = errors.New("duplicate order num")
 type QuestionService interface {
 	CreateQuestion(ctx context.Context, lessonID int, req CreateQuestionRequest) (int, error)
 	GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error)
+	UpdateQuestion(ctx context.Context, questionID int, req UpdateQuestionRequest) error
+	UpdateQuestionOption(ctx context.Context, optionID int, req UpdateQuestionOptionRequest) error
+	UpdateQuestionCorrectOption(ctx context.Context, questionID int, req UpdateQuestionCorrectOptionRequest) error
 	GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error)
 	SubmitAnswer(ctx context.Context, userID int, questionID int, req SubmitAnswerRequest) (SubmitAnswerResponse, error)
 }
@@ -74,6 +77,32 @@ func (s *Service) CreateQuestion(ctx context.Context, lessonID int, req CreateQu
 
 func (s *Service) GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error) {
 	return s.repo.GetQuestionsByLessonID(ctx, lessonID)
+}
+
+func (s *Service) UpdateQuestion(ctx context.Context, questionID int, req UpdateQuestionRequest) error {
+	questionText := strings.TrimSpace(req.QuestionText)
+	if questionID <= 0 || questionText == "" {
+		return ErrInvalidQuestion
+	}
+
+	return s.repo.UpdateQuestion(ctx, questionID, questionText)
+}
+
+func (s *Service) UpdateQuestionOption(ctx context.Context, optionID int, req UpdateQuestionOptionRequest) error {
+	optionText := strings.TrimSpace(req.OptionText)
+	if optionID <= 0 || optionText == "" {
+		return ErrInvalidQuestion
+	}
+
+	return s.repo.UpdateQuestionOption(ctx, optionID, optionText)
+}
+
+func (s *Service) UpdateQuestionCorrectOption(ctx context.Context, questionID int, req UpdateQuestionCorrectOptionRequest) error {
+	if questionID <= 0 || req.OptionID <= 0 {
+		return ErrInvalidAnswer
+	}
+
+	return s.repo.UpdateQuestionCorrectOption(ctx, questionID, req.OptionID)
 }
 
 func (s *Service) GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error) {

@@ -71,11 +71,17 @@ func main() {
 			adminGroup.POST("/courses", courseHandler.CreateCourse)
 			adminGroup.GET("/courses/:id", courseHandler.GetCourseByIDAdmin)
 			adminGroup.GET("/courses/:id/syllabus", courseHandler.GetCourseSyllabusAdmin)
+			adminGroup.PATCH("/courses/:id", courseHandler.UpdateCourse)
 			adminGroup.PATCH("/courses/:id/publish", courseHandler.UpdateCoursePublishStatus)
 			adminGroup.POST("/courses/:id/modules", courseHandler.CreateModule)
+			adminGroup.PATCH("/modules/:id", courseHandler.UpdateModule)
 			adminGroup.POST("/modules/:id/lessons", courseHandler.CreateLesson)
+			adminGroup.PATCH("/lessons/:id", courseHandler.UpdateLesson)
 			adminGroup.POST("/lessons/:id/questions", questionHandler.CreateQuestion)
 			adminGroup.GET("/lessons/:id/questions", questionHandler.GetQuestionsByLessonID)
+			adminGroup.PATCH("/questions/:id", questionHandler.UpdateQuestion)
+			adminGroup.PATCH("/questions/:id/correct-option", questionHandler.UpdateQuestionCorrectOption)
+			adminGroup.PATCH("/question-options/:id", questionHandler.UpdateQuestionOption)
 		}
 	}
 	port := os.Getenv("PORT")

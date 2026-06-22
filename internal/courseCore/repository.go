@@ -12,6 +12,9 @@ import (
 )
 
 var ErrCourseNotFound = errors.New("course not found")
+var ErrModuleNotFound = errors.New("module not found")
+var ErrLessonNotFound = errors.New("lesson not found")
+var ErrInvalidCourseContent = errors.New("invalid course content")
 var ErrCourseNotPublished = errors.New("course is not published")
 var ErrAlreadyEnrolled = errors.New("user already enrolled")
 var ErrDuplicateOrderNum = errors.New("duplicate order num")
@@ -24,6 +27,9 @@ type CourseRepository interface {
 	GetCourseByIDAdmin(ctx context.Context, id int) (Course, error)
 	GetCourseSyllabusAdmin(ctx context.Context, id int) (Course, error)
 	UpdateCoursePublishStatus(ctx context.Context, id int, isPublished bool) error
+	UpdateCourse(ctx context.Context, id int, title string, description string) error
+	UpdateModule(ctx context.Context, id int, title string) error
+	UpdateLesson(ctx context.Context, id int, title string, content string) error
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
 	CreateCourse(ctx context.Context, title, description string) (int, error)
@@ -56,7 +62,7 @@ func (r *Repository) GetCourseByID(ctx context.Context, id int) (Course, error) 
 func (r *Repository) GetCourseSyllabus(ctx context.Context, id int) (Course, error) {
 	query := `SELECT id, title, description, is_published FROM courses WHERE id = $1 AND is_published = true`
 
-	return r.getCourseSyllabus(ctx, query, id)
+	return r.getCourseSyllabus(ctx, query, id, false)
 }
 
 func (r *Repository) GetAllCoursesAdmin(ctx context.Context) ([]Course, error) {
@@ -74,7 +80,7 @@ func (r *Repository) GetCourseByIDAdmin(ctx context.Context, id int) (Course, er
 func (r *Repository) GetCourseSyllabusAdmin(ctx context.Context, id int) (Course, error) {
 	query := `SELECT id, title, description, is_published FROM courses WHERE id = $1`
 
-	return r.getCourseSyllabus(ctx, query, id)
+	return r.getCourseSyllabus(ctx, query, id, true)
 }
 
 func (r *Repository) UpdateCoursePublishStatus(ctx context.Context, id int, isPublished bool) error {
@@ -88,6 +94,54 @@ func (r *Repository) UpdateCoursePublishStatus(ctx context.Context, id int, isPu
 
 	if commandTag.RowsAffected() == 0 {
 		return ErrCourseNotFound
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateCourse(ctx context.Context, id int, title string, description string) error {
+	query := `UPDATE courses SET title = $1, description = $2 WHERE id = $3`
+
+	commandTag, err := r.db.Exec(ctx, query, title, description, id)
+	if err != nil {
+		slog.Error("UpdateCourse error", "error", err)
+		return fmt.Errorf("course update error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrCourseNotFound
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateModule(ctx context.Context, id int, title string) error {
+	query := `UPDATE modules SET title = $1 WHERE id = $2`
+
+	commandTag, err := r.db.Exec(ctx, query, title, id)
+	if err != nil {
+		slog.Error("UpdateModule error", "error", err)
+		return fmt.Errorf("module update error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrModuleNotFound
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateLesson(ctx context.Context, id int, title string, content string) error {
+	query := `UPDATE lessons SET title = $1, content = $2 WHERE id = $3`
+
+	commandTag, err := r.db.Exec(ctx, query, title, content, id)
+	if err != nil {
+		slog.Error("UpdateLesson error", "error", err)
+		return fmt.Errorf("lesson update error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrLessonNotFound
 	}
 
 	return nil
@@ -250,7 +304,7 @@ func (r *Repository) getCourse(ctx context.Context, query string, id int) (Cours
 	return c, nil
 }
 
-func (r *Repository) getCourseSyllabus(ctx context.Context, query string, id int) (Course, error) {
+func (r *Repository) getCourseSyllabus(ctx context.Context, query string, id int, includeLessonContent bool) (Course, error) {
 	c, err := r.getCourse(ctx, query, id)
 	if err != nil {
 		return Course{}, err
@@ -274,6 +328,10 @@ func (r *Repository) getCourseSyllabus(ctx context.Context, query string, id int
 		}
 
 		queryLessons := `SELECT id, module_id, title, order_num FROM lessons WHERE module_id = $1 ORDER BY order_num ASC, id ASC`
+		if includeLessonContent {
+			queryLessons = `SELECT id, module_id, title, content, order_num FROM lessons WHERE module_id = $1 ORDER BY order_num ASC, id ASC`
+		}
+
 		lessonRows, err := r.db.Query(ctx, queryLessons, m.ID)
 		if err != nil {
 			slog.Error("Lessons get error", "error", err)
@@ -282,7 +340,11 @@ func (r *Repository) getCourseSyllabus(ctx context.Context, query string, id int
 
 		for lessonRows.Next() {
 			var l Lesson
-			err := lessonRows.Scan(&l.ID, &l.ModuleID, &l.Title, &l.OrderNum)
+			if includeLessonContent {
+				err = lessonRows.Scan(&l.ID, &l.ModuleID, &l.Title, &l.Content, &l.OrderNum)
+			} else {
+				err = lessonRows.Scan(&l.ID, &l.ModuleID, &l.Title, &l.OrderNum)
+			}
 			if err != nil {
 				lessonRows.Close()
 				slog.Error("Lessons get error", "error", err)

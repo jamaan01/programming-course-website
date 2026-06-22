@@ -28,6 +28,18 @@ type CreateOptionRequest struct {
 	OrderNum   int    `json:"order_num"`
 }
 
+type UpdateQuestionRequest struct {
+	QuestionText string `json:"question_text" binding:"required"`
+}
+
+type UpdateQuestionOptionRequest struct {
+	OptionText string `json:"option_text" binding:"required"`
+}
+
+type UpdateQuestionCorrectOptionRequest struct {
+	OptionID int `json:"option_id" binding:"required"`
+}
+
 type StudentQuestionResponse struct {
 	ID           int                     `json:"id"`
 	LessonID     int                     `json:"lesson_id"`

@@ -15,6 +15,9 @@ import (
 type QuestionRepository interface {
 	CreateQuestion(ctx context.Context, lessonID int, req CreateQuestionRequest) (int, error)
 	GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error)
+	UpdateQuestion(ctx context.Context, questionID int, questionText string) error
+	UpdateQuestionOption(ctx context.Context, optionID int, optionText string) error
+	UpdateQuestionCorrectOption(ctx context.Context, questionID int, optionID int) error
 	QuestionOrderExists(ctx context.Context, lessonID int, orderNum int) (bool, error)
 	CheckStudentLessonAccess(ctx context.Context, userID int, lessonID int) error
 	GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error)
@@ -95,6 +98,89 @@ func (r *Repository) QuestionOrderExists(ctx context.Context, lessonID int, orde
 	}
 
 	return exists, nil
+}
+
+func (r *Repository) UpdateQuestion(ctx context.Context, questionID int, questionText string) error {
+	query := `UPDATE lesson_questions SET question_text = $1 WHERE id = $2`
+
+	commandTag, err := r.db.Exec(ctx, query, questionText, questionID)
+	if err != nil {
+		slog.Error("UpdateQuestion error", "error", err)
+		return fmt.Errorf("question update error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrQuestionNotFound
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateQuestionOption(ctx context.Context, optionID int, optionText string) error {
+	query := `UPDATE lesson_question_options SET option_text = $1 WHERE id = $2`
+
+	commandTag, err := r.db.Exec(ctx, query, optionText, optionID)
+	if err != nil {
+		slog.Error("UpdateQuestionOption error", "error", err)
+		return fmt.Errorf("question option update error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrOptionNotFound
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateQuestionCorrectOption(ctx context.Context, questionID int, optionID int) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		slog.Error("UpdateQuestionCorrectOption begin transaction error", "error", err)
+		return fmt.Errorf("correct option transaction begin error: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := checkQuestionExists(ctx, tx, questionID); err != nil {
+		return err
+	}
+
+	var optionQuestionID int
+	optionQuery := `SELECT question_id FROM lesson_question_options WHERE id = $1`
+	if err := tx.QueryRow(ctx, optionQuery, optionID).Scan(&optionQuestionID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrOptionNotFound
+		}
+		slog.Error("UpdateQuestionCorrectOption option check error", "error", err)
+		return fmt.Errorf("correct option check error: %w", err)
+	}
+
+	if optionQuestionID != questionID {
+		return ErrInvalidAnswer
+	}
+
+	resetQuery := `UPDATE lesson_question_options SET is_correct = false WHERE question_id = $1`
+	if _, err := tx.Exec(ctx, resetQuery, questionID); err != nil {
+		slog.Error("UpdateQuestionCorrectOption reset error", "error", err)
+		return fmt.Errorf("correct option reset error: %w", err)
+	}
+
+	setQuery := `UPDATE lesson_question_options SET is_correct = true WHERE id = $1 AND question_id = $2`
+	commandTag, err := tx.Exec(ctx, setQuery, optionID, questionID)
+	if err != nil {
+		slog.Error("UpdateQuestionCorrectOption set error", "error", err)
+		return fmt.Errorf("correct option set error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrOptionNotFound
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("UpdateQuestionCorrectOption commit error", "error", err)
+		return fmt.Errorf("correct option transaction commit error: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Repository) GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error) {
@@ -467,6 +553,26 @@ func (r *Repository) optionExists(ctx context.Context, optionID int) (bool, erro
 
 type lessonChecker interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+type questionChecker interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+func checkQuestionExists(ctx context.Context, db questionChecker, questionID int) error {
+	var id int
+
+	query := `SELECT id FROM lesson_questions WHERE id = $1`
+	err := db.QueryRow(ctx, query, questionID).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrQuestionNotFound
+		}
+		slog.Error("Check question exists error", "error", err)
+		return fmt.Errorf("question check error: %w", err)
+	}
+
+	return nil
 }
 
 func checkLessonExists(ctx context.Context, db lessonChecker, lessonID int) error {

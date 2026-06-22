@@ -147,6 +147,32 @@ export interface UpdateCoursePublishResponse {
   is_published: boolean
 }
 
+export interface AdminUpdateCoursePayload {
+  title: string
+  description: string
+}
+
+export interface AdminUpdateModulePayload {
+  title: string
+}
+
+export interface AdminUpdateLessonPayload {
+  title: string
+  content: string
+}
+
+export interface AdminUpdateQuestionPayload {
+  question_text: string
+}
+
+export interface AdminUpdateQuestionOptionPayload {
+  option_text: string
+}
+
+export interface AdminUpdateCorrectOptionPayload {
+  option_id: number
+}
+
 export interface AdminQuestion {
   id: number
   lesson_id: number

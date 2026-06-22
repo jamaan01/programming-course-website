@@ -72,6 +72,104 @@ func (h *QuestionHandler) GetQuestionsByLessonID(c *gin.Context) {
 	c.JSON(http.StatusOK, questions)
 }
 
+func (h *QuestionHandler) UpdateQuestion(c *gin.Context) {
+	questionID, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req questionCore.UpdateQuestionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних", "details": err.Error()})
+		return
+	}
+
+	err := h.service.UpdateQuestion(c.Request.Context(), questionID, req)
+	if err != nil {
+		if errors.Is(err, questionCore.ErrInvalidQuestion) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Перевірте текст питання"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrQuestionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Питання не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося оновити питання"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Питання оновлено"})
+}
+
+func (h *QuestionHandler) UpdateQuestionOption(c *gin.Context) {
+	optionID, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req questionCore.UpdateQuestionOptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних", "details": err.Error()})
+		return
+	}
+
+	err := h.service.UpdateQuestionOption(c.Request.Context(), optionID, req)
+	if err != nil {
+		if errors.Is(err, questionCore.ErrInvalidQuestion) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Перевірте текст варіанта"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrOptionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Варіант не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося оновити варіант"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Варіант оновлено"})
+}
+
+func (h *QuestionHandler) UpdateQuestionCorrectOption(c *gin.Context) {
+	questionID, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req questionCore.UpdateQuestionCorrectOptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних", "details": err.Error()})
+		return
+	}
+
+	err := h.service.UpdateQuestionCorrectOption(c.Request.Context(), questionID, req)
+	if err != nil {
+		if errors.Is(err, questionCore.ErrInvalidAnswer) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Варіант не належить цьому питанню"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrQuestionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Питання не знайдено"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrOptionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Варіант не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося оновити правильну відповідь"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Правильну відповідь оновлено"})
+}
+
 func (h *QuestionHandler) GetStudentQuestionsByLessonID(c *gin.Context) {
 	lessonID, ok := getIDParam(c, "id")
 	if !ok {

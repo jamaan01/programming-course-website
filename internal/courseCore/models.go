@@ -43,3 +43,17 @@ type CreateLessonRequest struct {
 type UpdateCoursePublishRequest struct {
 	IsPublished *bool `json:"is_published"`
 }
+
+type UpdateCourseRequest struct {
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description" binding:"required"`
+}
+
+type UpdateModuleRequest struct {
+	Title string `json:"title" binding:"required"`
+}
+
+type UpdateLessonRequest struct {
+	Title   string `json:"title" binding:"required"`
+	Content string `json:"content" binding:"required"`
+}
