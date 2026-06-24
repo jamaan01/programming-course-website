@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { FormattedMarkdownText } from '@/components/lessons/FormattedLessonContent'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   getLessonQuestions,
@@ -157,9 +158,9 @@ function QuestionCard({
           <p className="text-xs font-medium uppercase text-cyan-300">
             Питання {questionIndex + 1}
           </p>
-          <h3 className="text-base font-semibold leading-7 text-slate-100">
-            {question.question_text}
-          </h3>
+          <div className="min-w-0 text-slate-100">
+            <FormattedMarkdownText content={question.question_text} />
+          </div>
         </div>
 
         {result ? (
@@ -214,7 +215,9 @@ function QuestionCard({
                 <span className="size-1.5 rounded-full bg-slate-950" />
               ) : null}
             </span>
-            <span className="min-w-0 break-words">{option.option_text}</span>
+            <div className="min-w-0 flex-1">
+              <FormattedMarkdownText content={option.option_text} compact />
+            </div>
           </label>
         ))}
       </div>

@@ -17,6 +17,8 @@ type QuestionRepository interface {
 	GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error)
 	UpdateQuestion(ctx context.Context, questionID int, questionText string) error
 	UpdateQuestionOption(ctx context.Context, optionID int, optionText string) error
+	CreateQuestionOption(ctx context.Context, questionID int, optionText string) (Option, error)
+	DeleteQuestionOption(ctx context.Context, optionID int) error
 	UpdateQuestionCorrectOption(ctx context.Context, questionID int, optionID int) error
 	QuestionOrderExists(ctx context.Context, lessonID int, orderNum int) (bool, error)
 	CheckStudentLessonAccess(ctx context.Context, userID int, lessonID int) error
@@ -127,6 +129,124 @@ func (r *Repository) UpdateQuestionOption(ctx context.Context, optionID int, opt
 
 	if commandTag.RowsAffected() == 0 {
 		return ErrOptionNotFound
+	}
+
+	return nil
+}
+
+func (r *Repository) CreateQuestionOption(ctx context.Context, questionID int, optionText string) (Option, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		slog.Error("CreateQuestionOption begin transaction error", "error", err)
+		return Option{}, fmt.Errorf("question option transaction begin error: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := checkQuestionExists(ctx, tx, questionID); err != nil {
+		return Option{}, err
+	}
+
+	var orderNum int
+	orderQuery := `
+		SELECT COALESCE(MAX(order_num), 0) + 1
+		FROM lesson_question_options
+		WHERE question_id = $1
+	`
+	if err := tx.QueryRow(ctx, orderQuery, questionID).Scan(&orderNum); err != nil {
+		slog.Error("CreateQuestionOption order query error", "error", err)
+		return Option{}, fmt.Errorf("question option order query error: %w", err)
+	}
+
+	var option Option
+	insertQuery := `
+		INSERT INTO lesson_question_options (question_id, option_text, is_correct, order_num)
+		VALUES ($1, $2, false, $3)
+		RETURNING id, question_id, option_text, is_correct, order_num
+	`
+	err = tx.QueryRow(ctx, insertQuery, questionID, optionText, orderNum).Scan(
+		&option.ID,
+		&option.QuestionID,
+		&option.OptionText,
+		&option.IsCorrect,
+		&option.OrderNum,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
+			return Option{}, ErrDuplicateOrderNum
+		}
+		slog.Error("CreateQuestionOption insert error", "error", err)
+		return Option{}, fmt.Errorf("question option create error: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("CreateQuestionOption commit error", "error", err)
+		return Option{}, fmt.Errorf("question option transaction commit error: %w", err)
+	}
+
+	return option, nil
+}
+
+func (r *Repository) DeleteQuestionOption(ctx context.Context, optionID int) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		slog.Error("DeleteQuestionOption begin transaction error", "error", err)
+		return fmt.Errorf("question option delete transaction begin error: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var questionID int
+	var isCorrect bool
+	optionQuery := `
+		SELECT question_id, is_correct
+		FROM lesson_question_options
+		WHERE id = $1
+		FOR UPDATE
+	`
+	if err := tx.QueryRow(ctx, optionQuery, optionID).Scan(&questionID, &isCorrect); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrOptionNotFound
+		}
+		slog.Error("DeleteQuestionOption option query error", "error", err)
+		return fmt.Errorf("question option delete check error: %w", err)
+	}
+
+	if isCorrect {
+		return ErrCannotDeleteCorrectOption
+	}
+
+	rows, err := tx.Query(ctx, `SELECT id FROM lesson_question_options WHERE question_id = $1 FOR UPDATE`, questionID)
+	if err != nil {
+		slog.Error("DeleteQuestionOption option count query error", "error", err)
+		return fmt.Errorf("question option count query error: %w", err)
+	}
+
+	optionCount := 0
+	for rows.Next() {
+		optionCount++
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		rows.Close()
+		return fmt.Errorf("question option count rows error: %w", rowsErr)
+	}
+	rows.Close()
+
+	if optionCount <= 2 {
+		return ErrCannotDeleteLastOptions
+	}
+
+	commandTag, err := tx.Exec(ctx, `DELETE FROM lesson_question_options WHERE id = $1`, optionID)
+	if err != nil {
+		slog.Error("DeleteQuestionOption delete error", "error", err)
+		return fmt.Errorf("question option delete error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrOptionNotFound
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("DeleteQuestionOption commit error", "error", err)
+		return fmt.Errorf("question option delete transaction commit error: %w", err)
 	}
 
 	return nil

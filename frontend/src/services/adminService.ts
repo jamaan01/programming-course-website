@@ -1,5 +1,6 @@
 import { apiClient } from '@/services/apiClient'
 import type {
+  AdminCreateQuestionOptionPayload,
   AdminUpdateCorrectOptionPayload,
   AdminUpdateCoursePayload,
   AdminUpdateLessonPayload,
@@ -7,6 +8,7 @@ import type {
   AdminUpdateQuestionOptionPayload,
   AdminUpdateQuestionPayload,
   AdminQuestion,
+  AdminQuestionOption,
   Course,
   CreateCourseRequest,
   CreateCourseResponse,
@@ -149,6 +151,28 @@ export async function updateAdminQuestionOption(
   const { data } = await apiClient.patch<MessageResponse>(
     `/api/admin/question-options/${optionId}`,
     payload,
+  )
+
+  return data
+}
+
+export async function createAdminQuestionOption(
+  questionId: number,
+  payload: AdminCreateQuestionOptionPayload,
+): Promise<AdminQuestionOption> {
+  const { data } = await apiClient.post<AdminQuestionOption>(
+    `/api/admin/questions/${questionId}/options`,
+    payload,
+  )
+
+  return data
+}
+
+export async function deleteAdminQuestionOption(
+  optionId: number,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.delete<MessageResponse>(
+    `/api/admin/question-options/${optionId}`,
   )
 
   return data

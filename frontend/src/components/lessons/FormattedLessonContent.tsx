@@ -26,6 +26,7 @@ type ContentBlock =
 
 interface FormattedLessonContentProps {
   content: string
+  compact?: boolean
 }
 
 function getHeading(line: string): ContentBlock | null {
@@ -53,7 +54,7 @@ function getCodeFenceLanguage(line: string): string | null {
 }
 
 function getUnorderedListItem(line: string): string | null {
-  const match = /^-\s+(.+)$/.exec(line)
+  const match = /^[-*]\s+(.+)$/.exec(line)
 
   return match ? match[1] : null
 }
@@ -207,7 +208,11 @@ function renderTextWithLineBreaks(text: string, keyPrefix: string): ReactNode[] 
   })
 }
 
-function renderInline(text: string, keyPrefix: string): ReactNode[] {
+function renderInline(
+  text: string,
+  keyPrefix: string,
+  compact = false,
+): ReactNode[] {
   const pattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g
   const nodes: ReactNode[] = []
   let lastIndex = 0
@@ -236,7 +241,11 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       nodes.push(
         <code
           key={nodeKey}
-          className="rounded-md border border-slate-800 bg-slate-950 px-1.5 py-0.5 font-mono text-[0.9em] text-cyan-200"
+          className={
+            compact
+              ? 'rounded border border-slate-800 bg-slate-950 px-1 py-0.5 font-mono text-[0.9em] text-cyan-200'
+              : 'rounded-md border border-slate-800 bg-slate-950 px-1.5 py-0.5 font-mono text-[0.9em] text-cyan-200'
+          }
         >
           {token.slice(1, -1)}
         </code>,
@@ -251,6 +260,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
             href={linkMatch[2]}
             target="_blank"
             rel="noreferrer"
+            onClick={(event) => event.stopPropagation()}
             className="font-medium text-sky-300 underline decoration-sky-500/40 underline-offset-4 transition-colors hover:text-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           >
             {linkMatch[1]}
@@ -276,41 +286,83 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
   return nodes
 }
 
-function renderHeading(block: Extract<ContentBlock, { type: 'heading' }>) {
-  const className = {
-    1: 'text-2xl font-semibold leading-tight text-slate-100 sm:text-3xl',
-    2: 'text-xl font-semibold leading-tight text-slate-100 sm:text-2xl',
-    3: 'text-lg font-semibold leading-tight text-slate-100',
-  }[block.level]
+function renderHeading(
+  block: Extract<ContentBlock, { type: 'heading' }>,
+  compact = false,
+) {
+  const className = compact
+    ? {
+        1: 'text-base font-semibold leading-6 text-slate-100',
+        2: 'text-sm font-semibold leading-6 text-slate-100',
+        3: 'text-sm font-semibold leading-6 text-slate-100',
+      }[block.level]
+    : {
+        1: 'text-2xl font-semibold leading-tight text-slate-100 sm:text-3xl',
+        2: 'text-xl font-semibold leading-tight text-slate-100 sm:text-2xl',
+        3: 'text-lg font-semibold leading-tight text-slate-100',
+      }[block.level]
 
   if (block.level === 1) {
-    return <h1 className={className}>{renderInline(block.text, 'heading-1')}</h1>
+    return (
+      <h1 className={className}>
+        {renderInline(block.text, 'heading-1', compact)}
+      </h1>
+    )
   }
 
   if (block.level === 2) {
-    return <h2 className={className}>{renderInline(block.text, 'heading-2')}</h2>
+    return (
+      <h2 className={className}>
+        {renderInline(block.text, 'heading-2', compact)}
+      </h2>
+    )
   }
 
-  return <h3 className={className}>{renderInline(block.text, 'heading-3')}</h3>
+  return (
+    <h3 className={className}>
+      {renderInline(block.text, 'heading-3', compact)}
+    </h3>
+  )
 }
 
-export function FormattedLessonContent({
+export function FormattedMarkdownText({
   content,
+  compact = false,
 }: FormattedLessonContentProps) {
   const blocks = parseBlocks(content)
+  const containerClass = compact
+    ? 'space-y-2 break-words text-sm leading-6 text-slate-300'
+    : 'space-y-5 break-words text-base leading-8 text-slate-300'
+  const listClass = compact
+    ? 'list-disc space-y-1 pl-5 marker:text-cyan-300'
+    : 'list-disc space-y-2 pl-6 marker:text-cyan-300'
+  const orderedListClass = compact
+    ? 'list-decimal space-y-1 pl-5 marker:text-cyan-300'
+    : 'list-decimal space-y-2 pl-6 marker:text-cyan-300'
+  const codeWrapperClass = compact
+    ? 'overflow-hidden rounded-lg border border-slate-800 bg-slate-950'
+    : 'overflow-hidden rounded-xl border border-slate-800 bg-slate-950'
+  const codeLabelClass = compact
+    ? 'border-b border-slate-800 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-wide text-cyan-300'
+    : 'border-b border-slate-800 px-4 py-2 text-xs font-medium uppercase tracking-wide text-cyan-300'
+  const preClass = compact
+    ? 'overflow-x-auto p-3 text-xs leading-5 text-slate-200'
+    : 'overflow-x-auto p-4 text-sm leading-6 text-slate-200'
 
   return (
-    <div className="space-y-5 break-words text-base leading-8 text-slate-300">
+    <div className={containerClass}>
       {blocks.map((block, index) => {
         const blockKey = `${block.type}-${index}`
 
         if (block.type === 'heading') {
-          return <div key={blockKey}>{renderHeading(block)}</div>
+          return <div key={blockKey}>{renderHeading(block, compact)}</div>
         }
 
         if (block.type === 'paragraph') {
           return (
-            <p key={blockKey}>{renderInline(block.text, `${blockKey}-inline`)}</p>
+            <p key={blockKey}>
+              {renderInline(block.text, `${blockKey}-inline`, compact)}
+            </p>
           )
         }
 
@@ -318,11 +370,11 @@ export function FormattedLessonContent({
           return (
             <ul
               key={blockKey}
-              className="list-disc space-y-2 pl-6 marker:text-cyan-300"
+              className={listClass}
             >
               {block.items.map((item, itemIndex) => (
                 <li key={`${blockKey}-${itemIndex}`}>
-                  {renderInline(item, `${blockKey}-${itemIndex}-inline`)}
+                  {renderInline(item, `${blockKey}-${itemIndex}-inline`, compact)}
                 </li>
               ))}
             </ul>
@@ -333,11 +385,11 @@ export function FormattedLessonContent({
           return (
             <ol
               key={blockKey}
-              className="list-decimal space-y-2 pl-6 marker:text-cyan-300"
+              className={orderedListClass}
             >
               {block.items.map((item, itemIndex) => (
                 <li key={`${blockKey}-${itemIndex}`}>
-                  {renderInline(item, `${blockKey}-${itemIndex}-inline`)}
+                  {renderInline(item, `${blockKey}-${itemIndex}-inline`, compact)}
                 </li>
               ))}
             </ol>
@@ -347,14 +399,14 @@ export function FormattedLessonContent({
         return (
           <div
             key={blockKey}
-            className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950"
+            className={codeWrapperClass}
           >
             {block.language ? (
-              <div className="border-b border-slate-800 px-4 py-2 text-xs font-medium uppercase tracking-wide text-cyan-300">
+              <div className={codeLabelClass}>
                 {block.language}
               </div>
             ) : null}
-            <pre className="overflow-x-auto p-4 text-sm leading-6 text-slate-200">
+            <pre className={preClass}>
               <code>{block.code}</code>
             </pre>
           </div>
@@ -362,4 +414,10 @@ export function FormattedLessonContent({
       })}
     </div>
   )
+}
+
+export function FormattedLessonContent({
+  content,
+}: FormattedLessonContentProps) {
+  return <FormattedMarkdownText content={content} />
 }

@@ -134,6 +134,77 @@ func (h *QuestionHandler) UpdateQuestionOption(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Варіант оновлено"})
 }
 
+func (h *QuestionHandler) CreateQuestionOption(c *gin.Context) {
+	questionID, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req questionCore.CreateQuestionOptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
+		return
+	}
+
+	option, err := h.service.CreateQuestionOption(c.Request.Context(), questionID, req)
+	if err != nil {
+		if errors.Is(err, questionCore.ErrInvalidQuestion) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "option text is required"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrQuestionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "question not found"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrDuplicateOrderNum) {
+			c.JSON(http.StatusConflict, gin.H{"error": "duplicate option order"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create option"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, option)
+}
+
+func (h *QuestionHandler) DeleteQuestionOption(c *gin.Context) {
+	optionID, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	err := h.service.DeleteQuestionOption(c.Request.Context(), optionID)
+	if err != nil {
+		if errors.Is(err, questionCore.ErrInvalidID) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid option id"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrCannotDeleteCorrectOption) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot delete correct option"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrCannotDeleteLastOptions) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "question must have at least 2 options"})
+			return
+		}
+
+		if errors.Is(err, questionCore.ErrOptionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "option not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete option"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "option deleted"})
+}
+
 func (h *QuestionHandler) UpdateQuestionCorrectOption(c *gin.Context) {
 	questionID, ok := getIDParam(c, "id")
 	if !ok {

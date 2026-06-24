@@ -14,12 +14,16 @@ var ErrQuestionNotFound = errors.New("question not found")
 var ErrOptionNotFound = errors.New("option not found")
 var ErrAccessDenied = errors.New("access denied")
 var ErrDuplicateOrderNum = errors.New("duplicate order num")
+var ErrCannotDeleteCorrectOption = errors.New("cannot delete correct option")
+var ErrCannotDeleteLastOptions = errors.New("cannot delete last options")
 
 type QuestionService interface {
 	CreateQuestion(ctx context.Context, lessonID int, req CreateQuestionRequest) (int, error)
 	GetQuestionsByLessonID(ctx context.Context, lessonID int) ([]Question, error)
 	UpdateQuestion(ctx context.Context, questionID int, req UpdateQuestionRequest) error
 	UpdateQuestionOption(ctx context.Context, optionID int, req UpdateQuestionOptionRequest) error
+	CreateQuestionOption(ctx context.Context, questionID int, req CreateQuestionOptionRequest) (Option, error)
+	DeleteQuestionOption(ctx context.Context, optionID int) error
 	UpdateQuestionCorrectOption(ctx context.Context, questionID int, req UpdateQuestionCorrectOptionRequest) error
 	GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error)
 	SubmitAnswer(ctx context.Context, userID int, questionID int, req SubmitAnswerRequest) (SubmitAnswerResponse, error)
@@ -95,6 +99,23 @@ func (s *Service) UpdateQuestionOption(ctx context.Context, optionID int, req Up
 	}
 
 	return s.repo.UpdateQuestionOption(ctx, optionID, optionText)
+}
+
+func (s *Service) CreateQuestionOption(ctx context.Context, questionID int, req CreateQuestionOptionRequest) (Option, error) {
+	optionText := strings.TrimSpace(req.OptionText)
+	if questionID <= 0 || optionText == "" {
+		return Option{}, ErrInvalidQuestion
+	}
+
+	return s.repo.CreateQuestionOption(ctx, questionID, optionText)
+}
+
+func (s *Service) DeleteQuestionOption(ctx context.Context, optionID int) error {
+	if optionID <= 0 {
+		return ErrInvalidID
+	}
+
+	return s.repo.DeleteQuestionOption(ctx, optionID)
 }
 
 func (s *Service) UpdateQuestionCorrectOption(ctx context.Context, questionID int, req UpdateQuestionCorrectOptionRequest) error {

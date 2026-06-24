@@ -36,6 +36,10 @@ type UpdateQuestionOptionRequest struct {
 	OptionText string `json:"option_text" binding:"required"`
 }
 
+type CreateQuestionOptionRequest struct {
+	OptionText string `json:"option_text" binding:"required"`
+}
+
 type UpdateQuestionCorrectOptionRequest struct {
 	OptionID int `json:"option_id" binding:"required"`
 }

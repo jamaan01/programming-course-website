@@ -169,6 +169,10 @@ export interface AdminUpdateQuestionOptionPayload {
   option_text: string
 }
 
+export interface AdminCreateQuestionOptionPayload {
+  option_text: string
+}
+
 export interface AdminUpdateCorrectOptionPayload {
   option_id: number
 }

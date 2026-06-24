@@ -80,8 +80,10 @@ func main() {
 			adminGroup.POST("/lessons/:id/questions", questionHandler.CreateQuestion)
 			adminGroup.GET("/lessons/:id/questions", questionHandler.GetQuestionsByLessonID)
 			adminGroup.PATCH("/questions/:id", questionHandler.UpdateQuestion)
+			adminGroup.POST("/questions/:id/options", questionHandler.CreateQuestionOption)
 			adminGroup.PATCH("/questions/:id/correct-option", questionHandler.UpdateQuestionCorrectOption)
 			adminGroup.PATCH("/question-options/:id", questionHandler.UpdateQuestionOption)
+			adminGroup.DELETE("/question-options/:id", questionHandler.DeleteQuestionOption)
 		}
 	}
 	port := os.Getenv("PORT")

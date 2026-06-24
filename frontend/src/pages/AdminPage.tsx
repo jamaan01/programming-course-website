@@ -5,6 +5,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Trash2,
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -20,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { FormattedMarkdownText } from '@/components/lessons/FormattedLessonContent'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -28,6 +30,8 @@ import {
   createAdminLesson,
   createAdminLessonQuestion,
   createAdminModule,
+  createAdminQuestionOption,
+  deleteAdminQuestionOption,
   getAdminCourseSyllabus,
   getAdminCourses,
   getAdminLessonQuestions,
@@ -52,8 +56,14 @@ const controlClass =
   'border-slate-800 bg-slate-950/70 text-slate-100 placeholder:text-slate-500'
 const selectClass =
   'h-8 w-full rounded-lg border border-slate-800 bg-slate-950/70 px-2.5 py-1 text-sm text-slate-100 outline-none transition-colors focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/40 disabled:cursor-not-allowed disabled:opacity-50'
+const textareaBaseClass =
+  'w-full resize-y rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/40 disabled:cursor-not-allowed disabled:opacity-50'
 const textareaClass =
-  'min-h-36 w-full rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/40 disabled:cursor-not-allowed disabled:opacity-50'
+  `min-h-36 ${textareaBaseClass}`
+const questionTextareaClass =
+  `min-h-24 ${textareaBaseClass}`
+const optionTextareaClass =
+  `min-h-[72px] ${textareaBaseClass}`
 const duplicateOrderMessage = 'Цей порядковий номер вже зайнятий'
 
 const courseSchema = z.object({
@@ -552,8 +562,9 @@ function EditContentModal({
               </Label>
               <textarea
                 id="edit-question-text"
-                className="min-h-32 w-full rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                className={questionTextareaClass}
                 disabled={isSaving}
+                placeholder="Введіть текст питання"
                 value={values.questionText}
                 onChange={(event) =>
                   onChange({ ...values, questionText: event.target.value })
@@ -567,10 +578,11 @@ function EditContentModal({
               <Label htmlFor="edit-option-text" className="text-slate-200">
                 Текст варіанта
               </Label>
-              <Input
+              <textarea
                 id="edit-option-text"
-                className={controlClass}
+                className={optionTextareaClass}
                 disabled={isSaving}
+                placeholder="Введіть текст варіанта"
                 value={values.optionText}
                 onChange={(event) =>
                   onChange({ ...values, optionText: event.target.value })
@@ -581,24 +593,47 @@ function EditContentModal({
 
           {target.kind === 'correctOption' ? (
             <div className="space-y-2">
-              <Label htmlFor="edit-correct-option" className="text-slate-200">
+              <Label id="edit-correct-option-label" className="text-slate-200">
                 Правильний варіант
               </Label>
-              <select
+              <div
                 id="edit-correct-option"
-                className={selectClass}
-                disabled={isSaving}
-                value={values.optionId}
-                onChange={(event) =>
-                  onChange({ ...values, optionId: event.target.value })
-                }
+                className="space-y-2"
+                role="radiogroup"
+                aria-labelledby="edit-correct-option-label"
               >
-                {target.question.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.option_text}
-                  </option>
-                ))}
-              </select>
+                {target.question.options.map((option) => {
+                  const optionId = String(option.id)
+                  const isSelected = values.optionId === optionId
+
+                  return (
+                    <label
+                      key={option.id}
+                      className={
+                        isSelected
+                          ? 'flex cursor-pointer items-start gap-3 rounded-lg border border-sky-500/60 bg-sky-500/10 px-3 py-2'
+                          : 'flex cursor-pointer items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 hover:border-sky-500/40 hover:bg-slate-800/60'
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name="edit-correct-option"
+                        className="mt-1 size-4 border-slate-700 bg-slate-950 text-sky-500 focus:ring-sky-500"
+                        disabled={isSaving}
+                        value={optionId}
+                        checked={isSelected}
+                        onChange={() => onChange({ ...values, optionId })}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <FormattedMarkdownText
+                          content={option.option_text}
+                          compact
+                        />
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           ) : null}
 
@@ -799,6 +834,10 @@ export function AdminPage() {
   const [lessonError, setLessonError] = useState<string | null>(null)
   const [questionSuccess, setQuestionSuccess] = useState<string | null>(null)
   const [questionError, setQuestionError] = useState<string | null>(null)
+  const [newOptionTexts, setNewOptionTexts] = useState<Record<number, string>>({})
+  const [optionActionIds, setOptionActionIds] = useState<Set<string>>(
+    () => new Set(),
+  )
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
   const [editValues, setEditValues] =
     useState<EditFormValues>(emptyEditValues)
@@ -1260,6 +1299,106 @@ export function AdminPage() {
       )
     } finally {
       setIsEditSaving(false)
+    }
+  }
+
+  function setOptionActionBusy(actionID: string, isBusy: boolean) {
+    setOptionActionIds((current) => {
+      const next = new Set(current)
+
+      if (isBusy) {
+        next.add(actionID)
+      } else {
+        next.delete(actionID)
+      }
+
+      return next
+    })
+  }
+
+  async function handleCreateQuestionOption(question: AdminQuestion) {
+    if (!selectedQuestionLessonId) {
+      return
+    }
+
+    const optionText = (newOptionTexts[question.id] ?? '').trim()
+    if (!optionText) {
+      setQuestionSuccess(null)
+      setQuestionError('Введіть текст нового варіанта.')
+      return
+    }
+
+    const actionID = `create-option-${question.id}`
+    setQuestionSuccess(null)
+    setQuestionError(null)
+    setOptionActionBusy(actionID, true)
+
+    try {
+      await createAdminQuestionOption(question.id, {
+        option_text: optionText,
+      })
+      await loadQuestions(selectedQuestionLessonId, true)
+      setNewOptionTexts((current) => {
+        const next = { ...current }
+        delete next[question.id]
+        return next
+      })
+      setQuestionSuccess('Варіант додано.')
+    } catch (error) {
+      setQuestionError(
+        getAdminErrorMessage(
+          error,
+          'Не вдалося додати варіант. Спробуйте ще раз.',
+        ),
+      )
+    } finally {
+      setOptionActionBusy(actionID, false)
+    }
+  }
+
+  async function handleDeleteQuestionOption(
+    question: AdminQuestion,
+    option: AdminQuestionOption,
+  ) {
+    if (!selectedQuestionLessonId) {
+      return
+    }
+
+    if (option.is_correct) {
+      setQuestionSuccess(null)
+      setQuestionError('Спочатку оберіть інший правильний варіант.')
+      return
+    }
+
+    if (question.options.length <= 2) {
+      setQuestionSuccess(null)
+      setQuestionError('Питання має мати щонайменше 2 варіанти.')
+      return
+    }
+
+    const confirmed = window.confirm('Видалити цей варіант відповіді?')
+    if (!confirmed) {
+      return
+    }
+
+    const actionID = `delete-option-${option.id}`
+    setQuestionSuccess(null)
+    setQuestionError(null)
+    setOptionActionBusy(actionID, true)
+
+    try {
+      await deleteAdminQuestionOption(option.id)
+      await loadQuestions(selectedQuestionLessonId, true)
+      setQuestionSuccess('Варіант видалено.')
+    } catch (error) {
+      setQuestionError(
+        getAdminErrorMessage(
+          error,
+          'Не вдалося видалити варіант. Спробуйте ще раз.',
+        ),
+      )
+    } finally {
+      setOptionActionBusy(actionID, false)
     }
   }
 
@@ -2002,11 +2141,12 @@ export function AdminPage() {
                   </Label>
                   <textarea
                     id="question-text"
-                    className="min-h-24 w-full rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={questionTextareaClass}
                     disabled={
                       !selectedQuestionLessonId ||
                       questionForm.formState.isSubmitting
                     }
+                    placeholder="Введіть текст питання"
                     aria-invalid={Boolean(
                       questionForm.formState.errors.question_text,
                     )}
@@ -2086,13 +2226,14 @@ export function AdminPage() {
                             >
                               Варіант
                             </Label>
-                            <Input
+                            <textarea
                               id={`option-text-${field.id}`}
-                              className={controlClass}
+                              className={optionTextareaClass}
                               disabled={
                                 !selectedQuestionLessonId ||
                                 questionForm.formState.isSubmitting
                               }
+                              placeholder="Введіть текст варіанта"
                               aria-invalid={Boolean(
                                 questionForm.formState.errors.options?.[index]
                                   ?.option_text,
@@ -2395,9 +2536,9 @@ export function AdminPage() {
                       className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="font-medium text-slate-100">
-                          {question.question_text}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <FormattedMarkdownText content={question.question_text} />
+                        </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Button
                             type="button"
@@ -2445,10 +2586,11 @@ export function AdminPage() {
                             key={option.id}
                             className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2"
                           >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm text-slate-200">
-                                {option.option_text}
-                              </p>
+                            <div className="min-w-0 flex-1">
+                              <FormattedMarkdownText
+                                content={option.option_text}
+                                compact
+                              />
                               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                                 <span>#{option.order_num}</span>
                                 {option.is_correct ? (
@@ -2474,8 +2616,84 @@ export function AdminPage() {
                               <Pencil className="size-4" aria-hidden="true" />
                               Редагувати
                             </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-rose-500/40 text-rose-200 hover:bg-rose-500/10 hover:text-rose-100 disabled:border-slate-800 disabled:text-slate-500"
+                              disabled={
+                                option.is_correct ||
+                                question.options.length <= 2 ||
+                                optionActionIds.has(`delete-option-${option.id}`)
+                              }
+                              title={
+                                option.is_correct
+                                  ? 'Спочатку оберіть інший правильний варіант'
+                                  : question.options.length <= 2
+                                    ? 'Питання має мати щонайменше 2 варіанти'
+                                    : 'Видалити варіант'
+                              }
+                              onClick={() =>
+                                handleDeleteQuestionOption(question, option)
+                              }
+                            >
+                              {optionActionIds.has(`delete-option-${option.id}`) ? (
+                                <Loader2
+                                  className="size-4 animate-spin"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <Trash2 className="size-4" aria-hidden="true" />
+                              )}
+                              Видалити
+                            </Button>
                           </div>
                         ))}
+                      </div>
+                      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`new-option-text-${question.id}`}
+                            className="text-slate-200"
+                          >
+                            Новий варіант
+                          </Label>
+                          <textarea
+                            id={`new-option-text-${question.id}`}
+                            className={optionTextareaClass}
+                            disabled={optionActionIds.has(
+                              `create-option-${question.id}`,
+                            )}
+                            placeholder="Введіть текст варіанта"
+                            value={newOptionTexts[question.id] ?? ''}
+                            onChange={(event) =>
+                              setNewOptionTexts((current) => ({
+                                ...current,
+                                [question.id]: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mt-3 bg-sky-500 text-slate-950 hover:bg-sky-400"
+                          disabled={
+                            optionActionIds.has(`create-option-${question.id}`) ||
+                            !(newOptionTexts[question.id] ?? '').trim()
+                          }
+                          onClick={() => handleCreateQuestionOption(question)}
+                        >
+                          {optionActionIds.has(`create-option-${question.id}`) ? (
+                            <Loader2
+                              className="size-4 animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Plus className="size-4" aria-hidden="true" />
+                          )}
+                          Додати варіант
+                        </Button>
                       </div>
                     </div>
                   ))}
