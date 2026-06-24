@@ -53,7 +53,7 @@ const termsSections = [
   },
   {
     title: 'Контакти',
-    content: ['Email: goschoolgolab@gmail.com', 'Phone: +380 97 622 0809'],
+    content: ['Email: goschoolgolab@gmail.com', 'Phone: +380 97 622 00 89'],
   },
 ]
 

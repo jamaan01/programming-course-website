@@ -4,6 +4,7 @@ import {
   AUTH_TOKEN_STORAGE_KEY,
   clearStoredAuthToken,
   getStoredAuthToken,
+  isUnauthorizedStatus,
   normalizeApiError,
   setStoredAuthToken,
 } from '@/services/apiClient'
@@ -83,6 +84,8 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   async login(payload) {
     set({ isLoading: true, error: null })
 
+    let storedLoginToken = false
+
     try {
       const response = await loginUser(payload)
 
@@ -91,6 +94,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       }
 
       setStoredAuthToken(response.JWT)
+      storedLoginToken = true
       const profile = await getProfile()
 
       set({
@@ -103,7 +107,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     } catch (error) {
       const normalizedError = toNormalizedApiError(error)
 
-      if (normalizedError.status === 401) {
+      if (storedLoginToken && isUnauthorizedStatus(normalizedError.status)) {
         get().clearAuth()
       }
 
@@ -117,6 +121,8 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   async register(payload) {
     set({ isLoading: true, error: null })
 
+    let storedRegisterToken = false
+
     try {
       const response = await registerUser(payload)
 
@@ -125,6 +131,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       }
 
       setStoredAuthToken(response.jwt)
+      storedRegisterToken = true
       const profile = await getProfile()
 
       set({
@@ -137,7 +144,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     } catch (error) {
       const normalizedError = toNormalizedApiError(error)
 
-      if (normalizedError.status === 401) {
+      if (storedRegisterToken && isUnauthorizedStatus(normalizedError.status)) {
         get().clearAuth()
       }
 
@@ -169,7 +176,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     } catch (error) {
       const normalizedError = toNormalizedApiError(error)
 
-      if (normalizedError.status === 401) {
+      if (isUnauthorizedStatus(normalizedError.status)) {
         get().clearAuth()
       }
 
@@ -211,7 +218,17 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     } catch (error) {
       const normalizedError = toNormalizedApiError(error)
 
-      get().clearAuth()
+      if (isUnauthorizedStatus(normalizedError.status)) {
+        get().clearAuth()
+      } else {
+        // Preserve the token through deploy restarts, offline mode and 5xx errors.
+        set({
+          token,
+          user: null,
+          authStatus: 'authenticated',
+          isLoading: false,
+        })
+      }
 
       set({
         isLoading: false,

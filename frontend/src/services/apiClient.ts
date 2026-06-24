@@ -57,6 +57,10 @@ export function getUserFriendlyErrorMessage(status?: number): string {
   }
 }
 
+export function isUnauthorizedStatus(status?: number): boolean {
+  return status === 401 || status === 403
+}
+
 export function normalizeApiError(error: unknown): NormalizedApiError {
   if (!axios.isAxiosError<ApiErrorResponse>(error)) {
     return {
@@ -91,9 +95,8 @@ apiClient.interceptors.response.use(
   (error: unknown) => {
     const normalizedError = normalizeApiError(error)
 
-    if (normalizedError.status === 401) {
-      clearStoredAuthToken()
-    }
+    // Keep token persistence out of the generic API layer: network errors,
+    // deploy restarts and 5xx responses must not accidentally log users out.
 
     return Promise.reject(normalizedError)
   },

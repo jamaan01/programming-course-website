@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 
 const footerLinks = [
   {
-    label: '+380 97 622 0809',
-    href: 'tel:+380976220809',
+    label: '+380 97 622 00 89',
+    href: 'tel:+380976220089',
   },
   {
     label: 'goschoolgolab@gmail.com',
