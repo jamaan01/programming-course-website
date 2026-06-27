@@ -14,6 +14,7 @@ type UserService interface {
 	Register(ctx context.Context, req RegisterRequest) (string, int, error)
 	Login(ctx context.Context, req LoginRequest) (string, error)
 	GetProfile(ctx context.Context, id int) (*UserDB, error)
+	GetAllUsers(ctx context.Context) ([]AdminUserResponse, error)
 	UpdateProfile(ctx context.Context, id int, req UpdateProfileRequest) error
 }
 
@@ -87,6 +88,10 @@ func (s *userService) Login(ctx context.Context, req LoginRequest) (string, erro
 
 func (s *userService) GetProfile(ctx context.Context, id int) (*UserDB, error) {
 	return s.repo.GetUserByID(ctx, id)
+}
+
+func (s *userService) GetAllUsers(ctx context.Context) ([]AdminUserResponse, error) {
+	return s.repo.GetAllUsers(ctx)
 }
 
 func (s *userService) UpdateProfile(ctx context.Context, id int, req UpdateProfileRequest) error {

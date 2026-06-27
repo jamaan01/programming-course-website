@@ -1,5 +1,7 @@
 package courseCore
 
+import "time"
+
 type Course struct {
 	ID          int      `json:"id"`
 	Title       string   `json:"title"`
@@ -56,4 +58,28 @@ type UpdateModuleRequest struct {
 type UpdateLessonRequest struct {
 	Title   string `json:"title" binding:"required"`
 	Content string `json:"content" binding:"required"`
+}
+
+type CourseAccess struct {
+	ID          int        `json:"id"`
+	UserID      int        `json:"user_id"`
+	UserEmail   string     `json:"user_email"`
+	UserName    string     `json:"user_name"`
+	CourseID    int        `json:"course_id"`
+	CourseTitle string     `json:"course_title"`
+	GrantedBy   *int       `json:"granted_by,omitempty"`
+	IsActive    bool       `json:"is_active"`
+	GrantedAt   time.Time  `json:"granted_at"`
+	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
+}
+
+type GrantCourseAccessRequest struct {
+	UserEmail string `json:"user_email"`
+	UserID    int    `json:"user_id"`
+	CourseID  int    `json:"course_id" binding:"required"`
+}
+
+type CourseAccessCheckResponse struct {
+	HasAccess bool `json:"has_access"`
+	IsAdmin   bool `json:"is_admin"`
 }

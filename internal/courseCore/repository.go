@@ -18,6 +18,9 @@ var ErrInvalidCourseContent = errors.New("invalid course content")
 var ErrCourseNotPublished = errors.New("course is not published")
 var ErrAlreadyEnrolled = errors.New("user already enrolled")
 var ErrDuplicateOrderNum = errors.New("duplicate order num")
+var ErrUserNotFound = errors.New("user not found")
+var ErrCourseAccessNotFound = errors.New("course access not found")
+var ErrInvalidAccessGrant = errors.New("invalid course access grant")
 
 type CourseRepository interface {
 	GetAllCourses(ctx context.Context) ([]Course, error)
@@ -32,6 +35,10 @@ type CourseRepository interface {
 	UpdateLesson(ctx context.Context, id int, title string, content string) error
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
+	HasCourseAccess(ctx context.Context, userID int, courseID int, userRole string) (bool, error)
+	GetCourseAccessList(ctx context.Context) ([]CourseAccess, error)
+	GrantCourseAccess(ctx context.Context, userEmail string, userID int, courseID int, adminID int) (CourseAccess, error)
+	RevokeCourseAccess(ctx context.Context, accessID int) error
 	CreateCourse(ctx context.Context, title, description string) (int, error)
 	ModuleOrderExists(ctx context.Context, courseID int, orderNum int) (bool, error)
 	LessonOrderExists(ctx context.Context, moduleID int, orderNum int) (bool, error)
@@ -182,8 +189,8 @@ func (r *Repository) GetCoursesByUserID(ctx context.Context, userID int) ([]Cour
 	query := `
 	SELECT c.id, c.title, c.description, c.is_published
 	FROM courses c
-	JOIN enrollments e ON c.id = e.course_id
-	WHERE e.user_id = $1 AND c.is_published = true
+	JOIN course_access ca ON c.id = ca.course_id
+	WHERE ca.user_id = $1 AND ca.is_active = true AND c.is_published = true
 	ORDER BY c.id
 	`
 
@@ -195,6 +202,168 @@ func (r *Repository) GetCoursesByUserID(ctx context.Context, userID int) ([]Cour
 	defer rows.Close()
 
 	return scanCourses(rows)
+}
+
+func (r *Repository) HasCourseAccess(ctx context.Context, userID int, courseID int, userRole string) (bool, error) {
+	if userRole == "admin" {
+		return true, nil
+	}
+
+	var hasAccess bool
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM course_access ca
+			JOIN courses c ON c.id = ca.course_id
+			WHERE ca.user_id = $1
+				AND ca.course_id = $2
+				AND ca.is_active = true
+				AND c.is_published = true
+		)
+	`
+
+	err := r.db.QueryRow(ctx, query, userID, courseID).Scan(&hasAccess)
+	if err != nil {
+		slog.Error("HasCourseAccess query error", "error", err)
+		return false, fmt.Errorf("course access check error: %w", err)
+	}
+
+	return hasAccess, nil
+}
+
+func (r *Repository) GetCourseAccessList(ctx context.Context) ([]CourseAccess, error) {
+	query := `
+		SELECT
+			ca.id,
+			ca.user_id,
+			u.email,
+			u.name,
+			ca.course_id,
+			c.title,
+			ca.granted_by,
+			ca.is_active,
+			ca.granted_at,
+			ca.revoked_at
+		FROM course_access ca
+		JOIN users u ON u.id = ca.user_id
+		JOIN courses c ON c.id = ca.course_id
+		ORDER BY ca.is_active DESC, ca.granted_at DESC, ca.id DESC
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		slog.Error("GetCourseAccessList query error", "error", err)
+		return nil, fmt.Errorf("course access list query error: %w", err)
+	}
+	defer rows.Close()
+
+	accessList := make([]CourseAccess, 0)
+	for rows.Next() {
+		var access CourseAccess
+		err := rows.Scan(
+			&access.ID,
+			&access.UserID,
+			&access.UserEmail,
+			&access.UserName,
+			&access.CourseID,
+			&access.CourseTitle,
+			&access.GrantedBy,
+			&access.IsActive,
+			&access.GrantedAt,
+			&access.RevokedAt,
+		)
+		if err != nil {
+			slog.Error("GetCourseAccessList scan error", "error", err)
+			return nil, fmt.Errorf("course access list scan error: %w", err)
+		}
+		accessList = append(accessList, access)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("course access list rows error: %w", err)
+	}
+
+	return accessList, nil
+}
+
+func (r *Repository) GrantCourseAccess(ctx context.Context, userEmail string, userID int, courseID int, adminID int) (CourseAccess, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		slog.Error("GrantCourseAccess begin transaction error", "error", err)
+		return CourseAccess{}, fmt.Errorf("course access transaction begin error: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	resolvedUserID := userID
+	if resolvedUserID <= 0 {
+		email := strings.TrimSpace(userEmail)
+		if email == "" {
+			return CourseAccess{}, ErrInvalidAccessGrant
+		}
+
+		err := tx.QueryRow(ctx, `SELECT id FROM users WHERE LOWER(email) = LOWER($1)`, email).Scan(&resolvedUserID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return CourseAccess{}, ErrUserNotFound
+			}
+			slog.Error("GrantCourseAccess user lookup error", "error", err)
+			return CourseAccess{}, fmt.Errorf("course access user lookup error: %w", err)
+		}
+	}
+
+	if err := checkCourseExists(ctx, tx, courseID); err != nil {
+		return CourseAccess{}, err
+	}
+
+	var accessID int
+	query := `
+		INSERT INTO course_access (user_id, course_id, granted_by, is_active, granted_at, revoked_at)
+		VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP, NULL)
+		ON CONFLICT (user_id, course_id)
+		DO UPDATE SET
+			granted_by = EXCLUDED.granted_by,
+			is_active = true,
+			granted_at = CURRENT_TIMESTAMP,
+			revoked_at = NULL
+		RETURNING id
+	`
+	err = tx.QueryRow(ctx, query, resolvedUserID, courseID, adminID).Scan(&accessID)
+	if err != nil {
+		slog.Error("GrantCourseAccess upsert error", "error", err)
+		return CourseAccess{}, fmt.Errorf("course access grant error: %w", err)
+	}
+
+	access, err := scanCourseAccessByID(ctx, tx, accessID)
+	if err != nil {
+		return CourseAccess{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("GrantCourseAccess commit error", "error", err)
+		return CourseAccess{}, fmt.Errorf("course access transaction commit error: %w", err)
+	}
+
+	return access, nil
+}
+
+func (r *Repository) RevokeCourseAccess(ctx context.Context, accessID int) error {
+	query := `
+		UPDATE course_access
+		SET is_active = false, revoked_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`
+
+	commandTag, err := r.db.Exec(ctx, query, accessID)
+	if err != nil {
+		slog.Error("RevokeCourseAccess error", "error", err)
+		return fmt.Errorf("course access revoke error: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrCourseAccessNotFound
+	}
+
+	return nil
 }
 
 func (r *Repository) CreateCourse(ctx context.Context, title, description string) (int, error) {
@@ -375,4 +544,65 @@ func scanCourses(rows pgx.Rows) ([]Course, error) {
 	}
 
 	return courses, nil
+}
+
+type courseChecker interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+func checkCourseExists(ctx context.Context, db courseChecker, courseID int) error {
+	var id int
+	err := db.QueryRow(ctx, `SELECT id FROM courses WHERE id = $1`, courseID).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrCourseNotFound
+		}
+		slog.Error("Check course exists error", "error", err)
+		return fmt.Errorf("course check error: %w", err)
+	}
+
+	return nil
+}
+
+func scanCourseAccessByID(ctx context.Context, db courseChecker, accessID int) (CourseAccess, error) {
+	var access CourseAccess
+	query := `
+		SELECT
+			ca.id,
+			ca.user_id,
+			u.email,
+			u.name,
+			ca.course_id,
+			c.title,
+			ca.granted_by,
+			ca.is_active,
+			ca.granted_at,
+			ca.revoked_at
+		FROM course_access ca
+		JOIN users u ON u.id = ca.user_id
+		JOIN courses c ON c.id = ca.course_id
+		WHERE ca.id = $1
+	`
+
+	err := db.QueryRow(ctx, query, accessID).Scan(
+		&access.ID,
+		&access.UserID,
+		&access.UserEmail,
+		&access.UserName,
+		&access.CourseID,
+		&access.CourseTitle,
+		&access.GrantedBy,
+		&access.IsActive,
+		&access.GrantedAt,
+		&access.RevokedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return CourseAccess{}, ErrCourseAccessNotFound
+		}
+		slog.Error("Scan course access error", "error", err)
+		return CourseAccess{}, fmt.Errorf("course access scan error: %w", err)
+	}
+
+	return access, nil
 }

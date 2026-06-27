@@ -21,10 +21,10 @@ type QuestionRepository interface {
 	DeleteQuestionOption(ctx context.Context, optionID int) error
 	UpdateQuestionCorrectOption(ctx context.Context, questionID int, optionID int) error
 	QuestionOrderExists(ctx context.Context, lessonID int, orderNum int) (bool, error)
-	CheckStudentLessonAccess(ctx context.Context, userID int, lessonID int) error
+	CheckStudentLessonAccess(ctx context.Context, userID int, lessonID int, userRole string) error
 	GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error)
 	CheckQuestionExists(ctx context.Context, questionID int) error
-	CheckStudentQuestionAccess(ctx context.Context, userID int, questionID int) error
+	CheckStudentQuestionAccess(ctx context.Context, userID int, questionID int, userRole string) error
 	GetOptionCorrectness(ctx context.Context, questionID int, optionID int) (bool, error)
 	SaveQuestionAttempt(ctx context.Context, userID int, questionID int, selectedOptionID int, isCorrect bool) (QuestionUserAnswer, error)
 	GetQuestionLessonID(ctx context.Context, questionID int) (int, error)
@@ -346,9 +346,13 @@ func (r *Repository) GetQuestionsByLessonID(ctx context.Context, lessonID int) (
 	return questions, nil
 }
 
-func (r *Repository) CheckStudentLessonAccess(ctx context.Context, userID int, lessonID int) error {
+func (r *Repository) CheckStudentLessonAccess(ctx context.Context, userID int, lessonID int, userRole string) error {
 	if err := checkLessonExists(ctx, r.db, lessonID); err != nil {
 		return err
+	}
+
+	if userRole == "admin" {
+		return nil
 	}
 
 	var hasAccess bool
@@ -358,8 +362,11 @@ func (r *Repository) CheckStudentLessonAccess(ctx context.Context, userID int, l
 			FROM lessons l
 			JOIN modules m ON l.module_id = m.id
 			JOIN courses c ON m.course_id = c.id
-			JOIN enrollments e ON c.id = e.course_id
-			WHERE l.id = $1 AND e.user_id = $2 AND c.is_published = true
+			JOIN course_access ca ON c.id = ca.course_id
+			WHERE l.id = $1
+				AND ca.user_id = $2
+				AND ca.is_active = true
+				AND c.is_published = true
 		)
 	`
 
@@ -457,7 +464,11 @@ func (r *Repository) CheckQuestionExists(ctx context.Context, questionID int) er
 	return nil
 }
 
-func (r *Repository) CheckStudentQuestionAccess(ctx context.Context, userID int, questionID int) error {
+func (r *Repository) CheckStudentQuestionAccess(ctx context.Context, userID int, questionID int, userRole string) error {
+	if userRole == "admin" {
+		return nil
+	}
+
 	var hasAccess bool
 	query := `
 		SELECT EXISTS (
@@ -466,8 +477,11 @@ func (r *Repository) CheckStudentQuestionAccess(ctx context.Context, userID int,
 			JOIN lessons l ON q.lesson_id = l.id
 			JOIN modules m ON l.module_id = m.id
 			JOIN courses c ON m.course_id = c.id
-			JOIN enrollments e ON c.id = e.course_id
-			WHERE q.id = $1 AND e.user_id = $2 AND c.is_published = true
+			JOIN course_access ca ON c.id = ca.course_id
+			WHERE q.id = $1
+				AND ca.user_id = $2
+				AND ca.is_active = true
+				AND c.is_published = true
 		)
 	`
 

@@ -18,6 +18,10 @@ type CourseService interface {
 	UpdateLesson(ctx context.Context, id int, req UpdateLessonRequest) error
 	EnrollUser(ctx context.Context, userID int, courseID int) error
 	GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error)
+	GetCourseAccess(ctx context.Context, userID int, courseID int, userRole string) (CourseAccessCheckResponse, error)
+	GetCourseAccessList(ctx context.Context) ([]CourseAccess, error)
+	GrantCourseAccess(ctx context.Context, req GrantCourseAccessRequest, adminID int) (CourseAccess, error)
+	RevokeCourseAccess(ctx context.Context, accessID int) error
 	CreateCourse(ctx context.Context, req CreateCourseRequest) (int, error)
 	CreateModule(ctx context.Context, courseID int, req CreateModuleRequest) (int, error)
 	CreateLesson(ctx context.Context, moduleID int, req CreateLessonRequest) (int, error)
@@ -94,6 +98,40 @@ func (s *Service) EnrollUser(ctx context.Context, userID int, courseID int) erro
 
 func (s *Service) GetCoursesByUserID(ctx context.Context, userID int) ([]Course, error) {
 	return s.repo.GetCoursesByUserID(ctx, userID)
+}
+
+func (s *Service) GetCourseAccess(ctx context.Context, userID int, courseID int, userRole string) (CourseAccessCheckResponse, error) {
+	hasAccess, err := s.repo.HasCourseAccess(ctx, userID, courseID, userRole)
+	if err != nil {
+		return CourseAccessCheckResponse{}, err
+	}
+
+	isAdmin := userRole == "admin"
+	return CourseAccessCheckResponse{
+		HasAccess: hasAccess,
+		IsAdmin:   isAdmin,
+	}, nil
+}
+
+func (s *Service) GetCourseAccessList(ctx context.Context) ([]CourseAccess, error) {
+	return s.repo.GetCourseAccessList(ctx)
+}
+
+func (s *Service) GrantCourseAccess(ctx context.Context, req GrantCourseAccessRequest, adminID int) (CourseAccess, error) {
+	email := strings.TrimSpace(req.UserEmail)
+	if req.CourseID <= 0 || (email == "" && req.UserID <= 0) {
+		return CourseAccess{}, ErrInvalidAccessGrant
+	}
+
+	return s.repo.GrantCourseAccess(ctx, email, req.UserID, req.CourseID, adminID)
+}
+
+func (s *Service) RevokeCourseAccess(ctx context.Context, accessID int) error {
+	if accessID <= 0 {
+		return ErrInvalidAccessGrant
+	}
+
+	return s.repo.RevokeCourseAccess(ctx, accessID)
 }
 
 func (s *Service) CreateCourse(ctx context.Context, req CreateCourseRequest) (int, error) {

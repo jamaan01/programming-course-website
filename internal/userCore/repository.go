@@ -15,6 +15,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user UserDB) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*UserDB, error)
 	GetUserByID(ctx context.Context, id int) (*UserDB, error)
+	GetAllUsers(ctx context.Context) ([]AdminUserResponse, error)
 	UpdateUser(ctx context.Context, user UserDB) error
 }
 
@@ -77,6 +78,37 @@ func (r *userRepo) GetUserByID(ctx context.Context, id int) (*UserDB, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepo) GetAllUsers(ctx context.Context) ([]AdminUserResponse, error) {
+	query := `
+		SELECT id, name, email, role
+		FROM users
+		ORDER BY email ASC, id ASC
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		slog.Error("Get all users error", "error", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]AdminUserResponse, 0)
+	for rows.Next() {
+		var user AdminUserResponse
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Role); err != nil {
+			slog.Error("Get all users scan error", "error", err)
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (r *userRepo) UpdateUser(ctx context.Context, user UserDB) error {

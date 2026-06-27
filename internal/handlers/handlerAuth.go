@@ -100,6 +100,16 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	})
 }
 
+func (h *AuthHandler) GetAllUsersAdmin(c *gin.Context) {
+	users, err := h.service.GetAllUsers(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося отримати користувачів"})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
 func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	userIDcontext, exists := c.Get("userID")
 	if !exists {

@@ -107,6 +107,37 @@ export interface CourseProgressResponse {
   completed_lesson_ids: number[]
 }
 
+export interface CourseAccessResponse {
+  has_access: boolean
+  is_admin: boolean
+}
+
+export interface AdminUser {
+  id: number
+  name: string
+  email: string
+  role: string
+}
+
+export interface AdminCourseAccess {
+  id: number
+  user_id: number
+  user_email: string
+  user_name: string
+  course_id: number
+  course_title: string
+  granted_by?: number
+  is_active: boolean
+  granted_at: string
+  revoked_at?: string
+}
+
+export interface GrantCourseAccessRequest {
+  user_email: string
+  user_id?: number
+  course_id: number
+}
+
 export interface CreateCourseRequest {
   title: string
   description: string

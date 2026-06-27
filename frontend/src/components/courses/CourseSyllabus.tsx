@@ -1,4 +1,4 @@
-import { CheckCircle, FileText } from 'lucide-react'
+import { CheckCircle, FileText, Lock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import {
@@ -14,6 +14,7 @@ interface CourseSyllabusProps {
   modules: CourseModule[]
   completedLessonIds: number[]
   showProgress: boolean
+  isLocked?: boolean
 }
 
 function sortModules(modules: CourseModule[]): CourseModule[] {
@@ -31,6 +32,7 @@ export function CourseSyllabus({
   modules,
   completedLessonIds,
   showProgress,
+  isLocked = false,
 }: CourseSyllabusProps) {
   const sortedModules = sortModules(modules)
   const completedLessonIdSet = new Set(completedLessonIds)
@@ -76,7 +78,11 @@ export function CourseSyllabus({
                   {lessons.map((lesson) => {
                     const isCompleted =
                       showProgress && completedLessonIdSet.has(lesson.id)
-                    const LessonIcon = isCompleted ? CheckCircle : FileText
+                    const LessonIcon = isCompleted
+                      ? CheckCircle
+                      : isLocked
+                        ? Lock
+                        : FileText
 
                     return (
                       <li key={lesson.id}>
@@ -92,7 +98,12 @@ export function CourseSyllabus({
                             }
                             aria-hidden="true"
                           />
-                          <span>{lesson.title}</span>
+                          <span className="min-w-0 flex-1">{lesson.title}</span>
+                          {isLocked ? (
+                            <span className="shrink-0 rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-xs font-medium text-amber-200">
+                              Закрито
+                            </span>
+                          ) : null}
                         </Link>
                       </li>
                     )

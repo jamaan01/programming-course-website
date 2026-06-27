@@ -35,7 +35,7 @@ func (h *LessonHandler) GetLessonByID(c *gin.Context) {
 
 	userID := userIDcontext.(int)
 
-	lesson, err := h.service.GetLessonByID(c.Request.Context(), lessonID, userID)
+	lesson, err := h.service.GetLessonByID(c.Request.Context(), lessonID, userID, getAuthenticatedUserRole(c))
 	if err != nil {
 		if errors.Is(err, lessonCore.ErrAccessDenied) || strings.Contains(err.Error(), "доступ заборонено") {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
@@ -84,7 +84,7 @@ func (h *LessonHandler) CompleteLesson(c *gin.Context) {
 		return
 	}
 
-	err = h.service.UpdateLessonProgress(c.Request.Context(), userID, lessonID, input.Completed)
+	err = h.service.UpdateLessonProgress(c.Request.Context(), userID, lessonID, input.Completed, getAuthenticatedUserRole(c))
 	if err != nil {
 		if errors.Is(err, lessonCore.ErrAccessDenied) || strings.Contains(err.Error(), "доступ заборонено") {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
@@ -125,7 +125,7 @@ func (h *LessonHandler) GetLessonProgress(c *gin.Context) {
 		return
 	}
 
-	completedIDs, err := h.service.GetCompleteLesson(c.Request.Context(), userID, courseID)
+	completedIDs, err := h.service.GetCompleteLesson(c.Request.Context(), userID, courseID, getAuthenticatedUserRole(c))
 	if err != nil {
 		if errors.Is(err, lessonCore.ErrAccessDenied) || strings.Contains(err.Error(), "доступ заборонено") {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

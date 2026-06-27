@@ -36,6 +36,17 @@ CREATE TABLE IF NOT EXISTS enrollments (
     PRIMARY KEY (user_id, course_id)
 );
 
+CREATE TABLE IF NOT EXISTS course_access (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    granted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    granted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMP NULL,
+    UNIQUE(user_id, course_id)
+);
+
 CREATE TABLE IF NOT EXISTS lesson_progress (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
@@ -131,6 +142,16 @@ ON lessons(module_id);
 
 CREATE INDEX IF NOT EXISTS enrollments_course_id_idx
 ON enrollments(course_id);
+
+CREATE INDEX IF NOT EXISTS course_access_user_id_idx
+ON course_access(user_id);
+
+CREATE INDEX IF NOT EXISTS course_access_course_id_idx
+ON course_access(course_id);
+
+CREATE INDEX IF NOT EXISTS course_access_active_idx
+ON course_access(user_id, course_id)
+WHERE is_active = true;
 
 CREATE INDEX IF NOT EXISTS lesson_progress_lesson_id_idx
 ON lesson_progress(lesson_id);

@@ -6,6 +6,7 @@ import { AdminRoute } from '@/components/routing/AdminRoute'
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute'
 import { AdminPage } from '@/pages/AdminPage'
 import { CoursePage } from '@/pages/CoursePage'
+import { CoursePurchasePage } from '@/pages/CoursePurchasePage'
 import { HomePage } from '@/pages/HomePage'
 import { LessonPage } from '@/pages/LessonPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -43,6 +44,10 @@ export const router = createBrowserRouter([
       {
         path: '/courses/:courseId',
         element: <CoursePage />,
+      },
+      {
+        path: '/courses/:courseId/buy',
+        element: <CoursePurchasePage />,
       },
       {
         path: '/courses/:courseId/lessons/:lessonId',

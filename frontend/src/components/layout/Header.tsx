@@ -1,4 +1,4 @@
-import { BookOpen, LogOut, ShieldCheck, User } from 'lucide-react'
+import { BookOpen, Briefcase, LogOut, ShieldCheck, User } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -42,6 +42,17 @@ export function Header() {
           <NavLink to="/" className={navLinkClass}>
             Курси
           </NavLink>
+
+          <span
+            className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-300"
+            aria-disabled="true"
+          >
+            <Briefcase className="size-4 text-cyan-300" aria-hidden="true" />
+            Фриланс-дошка
+            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-cyan-200">
+              Coming soon
+            </span>
+          </span>
 
           {isAuthenticated ? (
             <>

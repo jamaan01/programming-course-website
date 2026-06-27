@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -43,8 +43,23 @@ function getLoginErrorMessage(authError: { status?: number; message: string }) {
   return authError.message
 }
 
+function getSafeRedirectPath(value: string | null): string | null {
+  if (!value) {
+    return null
+  }
+
+  const redirect = value.trim()
+
+  if (!redirect.startsWith('/') || redirect.startsWith('//')) {
+    return null
+  }
+
+  return redirect
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const login = useAuthStore((state) => state.login)
   const clearError = useAuthStore((state) => state.clearError)
   const authStatus = useAuthStore((state) => state.authStatus)
@@ -62,6 +77,11 @@ export function LoginPage() {
       password: '',
     },
   })
+  const redirectPath = getSafeRedirectPath(searchParams.get('redirect'))
+  const successPath = redirectPath ?? '/profile'
+  const registerPath = redirectPath
+    ? `/register?redirect=${encodeURIComponent(redirectPath)}`
+    : '/register'
 
   useEffect(() => {
     clearError()
@@ -69,12 +89,16 @@ export function LoginPage() {
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
-      navigate('/profile', { replace: true })
+      navigate(successPath, { replace: true })
     }
-  }, [authStatus, navigate])
+  }, [authStatus, navigate, successPath])
 
   async function onSubmit(values: LoginFormValues) {
     await login(values)
+
+    if (useAuthStore.getState().authStatus === 'authenticated') {
+      navigate(successPath, { replace: true })
+    }
   }
 
   const isPending = isLoading || isSubmitting
@@ -154,7 +178,7 @@ export function LoginPage() {
           <p className="mt-8 text-center text-sm text-slate-400">
             Ще не маєте акаунту?{' '}
             <Link
-              to="/register"
+              to={registerPath}
               className="font-medium text-sky-300 hover:text-sky-200"
             >
               Зареєструватися

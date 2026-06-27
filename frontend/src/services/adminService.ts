@@ -1,5 +1,6 @@
 import { apiClient } from '@/services/apiClient'
 import type {
+  AdminCourseAccess,
   AdminCreateQuestionOptionPayload,
   AdminUpdateCorrectOptionPayload,
   AdminUpdateCoursePayload,
@@ -9,6 +10,7 @@ import type {
   AdminUpdateQuestionPayload,
   AdminQuestion,
   AdminQuestionOption,
+  AdminUser,
   Course,
   CreateCourseRequest,
   CreateCourseResponse,
@@ -18,6 +20,7 @@ import type {
   CreateModuleResponse,
   CreateQuestionRequest,
   CreateQuestionResponse,
+  GrantCourseAccessRequest,
   MessageResponse,
   UpdateCoursePublishRequest,
   UpdateCoursePublishResponse,
@@ -40,6 +43,41 @@ export async function getAdminCourseSyllabus(
 ): Promise<Course> {
   const { data } = await apiClient.get<Course>(
     `/api/admin/courses/${courseId}/syllabus`,
+  )
+
+  return data
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  const { data } = await apiClient.get<AdminUser[]>('/api/admin/users')
+
+  return data
+}
+
+export async function getAdminCourseAccess(): Promise<AdminCourseAccess[]> {
+  const { data } = await apiClient.get<AdminCourseAccess[]>(
+    '/api/admin/course-access',
+  )
+
+  return data
+}
+
+export async function grantAdminCourseAccess(
+  payload: GrantCourseAccessRequest,
+): Promise<AdminCourseAccess> {
+  const { data } = await apiClient.post<AdminCourseAccess>(
+    '/api/admin/course-access',
+    payload,
+  )
+
+  return data
+}
+
+export async function revokeAdminCourseAccess(
+  accessId: number,
+): Promise<MessageResponse> {
+  const { data } = await apiClient.patch<MessageResponse>(
+    `/api/admin/course-access/${accessId}/revoke`,
   )
 
   return data

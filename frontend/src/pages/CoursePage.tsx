@@ -2,14 +2,15 @@ import { RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
+import { CourseAccessLockedCard } from '@/components/courses/CourseAccessLockedCard'
 import { CourseHeader } from '@/components/courses/CourseHeader'
 import { CourseSyllabus } from '@/components/courses/CourseSyllabus'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  enrollInCourse,
   getCourseById,
+  getCourseAccess,
   getCourseProgress,
   getCourseSyllabus,
 } from '@/services/courseService'
@@ -23,8 +24,6 @@ import type {
 
 const courseLoadErrorMessage =
   'Не вдалося завантажити курс. Спробуйте повторити запит.'
-const enrollErrorMessage =
-  'Не вдалося записатися на курс. Спробуйте ще раз.'
 
 function parseCourseId(courseId: string | undefined): number | null {
   if (!courseId) {
@@ -148,7 +147,6 @@ export function CoursePage() {
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([])
   const [hasProgressData, setHasProgressData] = useState(false)
   const [isEnrolled, setIsEnrolled] = useState(false)
-  const [isEnrollmentLoading, setIsEnrollmentLoading] = useState(false)
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null)
 
   const loadCourseData = useCallback(async () => {
@@ -173,35 +171,6 @@ export function CoursePage() {
     }
   }, [parsedCourseId])
 
-  const loadProgress = useCallback(async (): Promise<boolean> => {
-    if (!parsedCourseId || authStatus !== 'authenticated') {
-      return false
-    }
-
-    try {
-      const progress = await fetchProgress(parsedCourseId)
-
-      setCompletedLessonIds(progress.completed_lesson_ids)
-      setHasProgressData(true)
-      setIsEnrolled(true)
-
-      return true
-    } catch (error) {
-      const status = getErrorStatus(error)
-
-      setCompletedLessonIds([])
-      setHasProgressData(false)
-
-      if (status === 403 || status === 404) {
-        setIsEnrolled(false)
-        return false
-      }
-
-      setIsEnrolled(false)
-      return false
-    }
-  }, [authStatus, parsedCourseId])
-
   useEffect(() => {
     if (!parsedCourseId) {
       return
@@ -217,6 +186,9 @@ export function CoursePage() {
 
         setIsCourseLoading(true)
         setCourseError(null)
+        setCompletedLessonIds([])
+        setHasProgressData(false)
+        setIsEnrolled(false)
         return fetchCoursePageData(parsedCourseId)
       })
       .then((response) => {
@@ -250,22 +222,44 @@ export function CoursePage() {
   }, [parsedCourseId])
 
   useEffect(() => {
-    if (!parsedCourseId || authStatus !== 'authenticated') {
+    if (!parsedCourseId) {
+      return
+    }
+
+    if (authStatus !== 'authenticated') {
+      void Promise.resolve().then(() => {
+        setCompletedLessonIds([])
+        setHasProgressData(false)
+        setIsEnrolled(false)
+      })
       return
     }
 
     let isMounted = true
 
     void Promise.resolve()
-      .then(() => fetchProgress(parsedCourseId))
-      .then((progress) => {
+      .then(() => getCourseAccess(parsedCourseId))
+      .then(async (access) => {
+        if (!isMounted) {
+          return
+        }
+
+        setIsEnrolled(access.has_access)
+
+        if (!access.has_access) {
+          setCompletedLessonIds([])
+          setHasProgressData(false)
+          return
+        }
+
+        const progress = await fetchProgress(parsedCourseId)
+
         if (!isMounted) {
           return
         }
 
         setCompletedLessonIds(progress.completed_lesson_ids)
         setHasProgressData(true)
-        setIsEnrolled(true)
       })
       .catch((error) => {
         if (!isMounted) {
@@ -279,10 +273,10 @@ export function CoursePage() {
 
         if (status === 403 || status === 404) {
           setIsEnrolled(false)
+          setCompletedLessonIds([])
+          setHasProgressData(false)
           return
         }
-
-        setIsEnrolled(false)
       })
 
     return () => {
@@ -300,28 +294,13 @@ export function CoursePage() {
     authStatus === 'authenticated' && isEnrolled && hasProgressData
   const effectiveIsEnrolled = authStatus === 'authenticated' && isEnrolled
 
-  async function handleEnroll() {
+  function handleBuy() {
     if (!parsedCourseId) {
       return
     }
 
     setEnrollmentError(null)
-
-    if (authStatus !== 'authenticated') {
-      navigate('/login')
-      return
-    }
-
-    setIsEnrollmentLoading(true)
-
-    try {
-      await enrollInCourse(parsedCourseId)
-      await loadProgress()
-    } catch {
-      setEnrollmentError(enrollErrorMessage)
-    } finally {
-      setIsEnrollmentLoading(false)
-    }
+    navigate(`/courses/${parsedCourseId}/buy`)
   }
 
   if (!parsedCourseId) {
@@ -348,14 +327,20 @@ export function CoursePage() {
             course={course}
             authStatus={authStatus}
             isEnrolled={effectiveIsEnrolled}
-            isEnrollmentLoading={isEnrollmentLoading}
+            isEnrollmentLoading={false}
             enrollmentError={enrollmentError}
             showProgress={showProgress}
             progressPercent={progressPercent}
             completedLessonsCount={completedLessonIds.length}
             totalLessons={totalLessons}
-            onEnroll={handleEnroll}
+            onEnroll={handleBuy}
           />
+
+          {!effectiveIsEnrolled ? (
+            <CourseAccessLockedCard
+              purchaseHref={`/courses/${parsedCourseId}/buy`}
+            />
+          ) : null}
 
           <section className="space-y-4">
             <div className="space-y-2">
@@ -372,6 +357,7 @@ export function CoursePage() {
               modules={modules}
               completedLessonIds={completedLessonIds}
               showProgress={showProgress}
+              isLocked={!effectiveIsEnrolled}
             />
           </section>
         </div>

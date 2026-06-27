@@ -2,6 +2,7 @@ import { ArrowLeft, CheckCircle, Loader2, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+import { CourseAccessLockedCard } from '@/components/courses/CourseAccessLockedCard'
 import { LessonContent } from '@/components/lessons/LessonContent'
 import { LessonNavigation } from '@/components/lessons/LessonNavigation'
 import {
@@ -23,7 +24,6 @@ import type {
   NormalizedApiError,
 } from '@/types/api'
 
-const notEnrolledMessage = 'Ви не записані на цей курс'
 const lessonLoadErrorMessage =
   'Не вдалося завантажити урок. Спробуйте повторити запит.'
 const syllabusLoadErrorMessage =
@@ -124,20 +124,15 @@ interface NotEnrolledStateProps {
 
 function NotEnrolledState({ courseId }: NotEnrolledStateProps) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 px-5 py-8">
-      <p className="text-lg font-semibold text-slate-100">
-        {notEnrolledMessage}
-      </p>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-        Запишіться на курс, щоб отримати доступ до уроків і прогресу навчання.
-      </p>
-      <Button
-        className="mt-5 bg-sky-500 text-slate-950 hover:bg-sky-400"
-        render={<Link to={`/courses/${courseId}`} />}
+    <div className="space-y-5">
+      <CourseAccessLockedCard purchaseHref={`/courses/${courseId}/buy`} />
+      <Link
+        to={`/courses/${courseId}`}
+        className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         Повернутися до курсу
-      </Button>
+      </Link>
     </div>
   )
 }

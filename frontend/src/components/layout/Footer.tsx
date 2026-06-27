@@ -11,7 +11,7 @@ const footerLinks = [
   },
   {
     label: 'Telegram',
-    href: 'https://t.me/golab_ua',
+    href: 'https://t.me/golab_school',
   },
   {
     label: 'Instagram',
@@ -37,12 +37,9 @@ const legalLinks = [
 export function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-5 text-sm text-slate-500 sm:px-6 lg:mx-0 lg:max-w-[78rem] lg:px-8 xl:flex-row xl:items-start xl:justify-between">
-        <div>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 text-sm text-slate-500 sm:px-6 lg:mx-0 lg:max-w-[78rem] lg:px-8 xl:flex-row xl:items-center xl:justify-between">
+        <div className="space-y-2">
           <p className="font-medium text-slate-300">Контакти</p>
-        </div>
-
-        <div className="flex flex-col gap-2 xl:items-end">
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {footerLinks.map((link) => (
               <a
@@ -56,19 +53,19 @@ export function Footer() {
               </a>
             ))}
           </nav>
-
-          <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-            {legalLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="transition-colors hover:text-sky-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
         </div>
+
+        <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs xl:justify-end">
+          {legalLinks.map((link) => (
+            <Link
+              key={link.href}
+              to={link.href}
+              className="transition-colors hover:text-sky-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </footer>
   )

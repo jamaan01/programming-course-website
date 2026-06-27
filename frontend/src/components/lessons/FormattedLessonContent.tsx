@@ -23,6 +23,11 @@ type ContentBlock =
       code: string
       language: string | null
     }
+  | {
+      type: 'table'
+      headers: string[]
+      rows: string[][]
+    }
 
 interface FormattedLessonContentProps {
   content: string
@@ -65,6 +70,61 @@ function getOrderedListItem(line: string): string | null {
   return match ? match[1] : null
 }
 
+function splitTableRow(line: string): string[] {
+  const trimmedLine = line.trim()
+  let cells = trimmedLine.split('|')
+
+  if (trimmedLine.startsWith('|')) {
+    cells = cells.slice(1)
+  }
+
+  if (trimmedLine.endsWith('|')) {
+    cells = cells.slice(0, -1)
+  }
+
+  return cells.map((cell) => cell.trim())
+}
+
+function isTableRow(line: string): boolean {
+  const trimmedLine = line.trim()
+
+  if (!trimmedLine.includes('|')) {
+    return false
+  }
+
+  return splitTableRow(trimmedLine).length >= 2
+}
+
+function isTableSeparatorRow(line: string): boolean {
+  if (!isTableRow(line)) {
+    return false
+  }
+
+  const cells = splitTableRow(line)
+  const separatorPattern = /^:?-{3,}:?$/
+
+  return (
+    cells.length >= 2 &&
+    cells.every((cell) => separatorPattern.test(cell.trim()))
+  )
+}
+
+function isTableStart(lines: string[], index: number): boolean {
+  return (
+    index + 1 < lines.length &&
+    isTableRow(lines[index]) &&
+    isTableSeparatorRow(lines[index + 1])
+  )
+}
+
+function normalizeTableRow(cells: string[], columnCount: number): string[] {
+  if (cells.length < columnCount) {
+    return [...cells, ...Array(columnCount - cells.length).fill('')]
+  }
+
+  return cells.slice(0, columnCount)
+}
+
 function parseBlocks(content: string): ContentBlock[] {
   const lines = content.replace(/\r\n/g, '\n').split('\n')
   const blocks: ContentBlock[] = []
@@ -98,6 +158,26 @@ function parseBlocks(content: string): ContentBlock[] {
         type: 'code',
         code: codeLines.join('\n'),
         language: fenceLanguage || null,
+      })
+      continue
+    }
+
+    if (isTableStart(lines, index)) {
+      const headers = splitTableRow(line)
+      const columnCount = headers.length
+      const rows: string[][] = []
+
+      index += 2
+
+      while (index < lines.length && isTableRow(lines[index])) {
+        rows.push(normalizeTableRow(splitTableRow(lines[index]), columnCount))
+        index += 1
+      }
+
+      blocks.push({
+        type: 'table',
+        headers,
+        rows,
       })
       continue
     }
@@ -167,7 +247,8 @@ function parseBlocks(content: string): ContentBlock[] {
         getCodeFenceLanguage(currentLine) !== null ||
         getHeading(currentLine) ||
         getUnorderedListItem(currentLine) !== null ||
-        getOrderedListItem(currentLine) !== null
+        getOrderedListItem(currentLine) !== null ||
+        isTableStart(lines, index)
       ) {
         break
       }
@@ -348,6 +429,19 @@ export function FormattedMarkdownText({
   const preClass = compact
     ? 'overflow-x-auto p-3 text-xs leading-5 text-slate-200'
     : 'overflow-x-auto p-4 text-sm leading-6 text-slate-200'
+  const tableWrapperClass = compact
+    ? 'overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/60'
+    : 'overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/70'
+  const tableClass = compact
+    ? 'min-w-full border-collapse text-left text-xs'
+    : 'min-w-full border-collapse text-left text-sm'
+  const tableHeadClass = 'bg-slate-900/80'
+  const tableHeaderCellClass = compact
+    ? 'border-b border-slate-800 px-2 py-1.5 font-semibold text-slate-100'
+    : 'border-b border-slate-800 px-4 py-3 font-semibold text-slate-100'
+  const tableCellClass = compact
+    ? 'border-t border-slate-800 px-2 py-1.5 align-top text-slate-300'
+    : 'border-t border-slate-800 px-4 py-3 align-top text-slate-300'
 
   return (
     <div className={containerClass}>
@@ -393,6 +487,53 @@ export function FormattedMarkdownText({
                 </li>
               ))}
             </ol>
+          )
+        }
+
+        if (block.type === 'table') {
+          return (
+            <div key={blockKey} className={tableWrapperClass}>
+              <table className={tableClass}>
+                <thead className={tableHeadClass}>
+                  <tr>
+                    {block.headers.map((header, headerIndex) => (
+                      <th
+                        key={`${blockKey}-header-${headerIndex}`}
+                        className={tableHeaderCellClass}
+                      >
+                        <span className="break-words">
+                          {renderInline(
+                            header,
+                            `${blockKey}-header-${headerIndex}-inline`,
+                            compact,
+                          )}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, rowIndex) => (
+                    <tr key={`${blockKey}-row-${rowIndex}`}>
+                      {row.map((cell, cellIndex) => (
+                        <td
+                          key={`${blockKey}-row-${rowIndex}-cell-${cellIndex}`}
+                          className={tableCellClass}
+                        >
+                          <span className="break-words">
+                            {renderInline(
+                              cell,
+                              `${blockKey}-row-${rowIndex}-cell-${cellIndex}-inline`,
+                              compact,
+                            )}
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )
         }
 

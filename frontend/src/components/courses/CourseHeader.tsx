@@ -1,9 +1,11 @@
-import { ArrowLeft, CheckCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Loader2, Lock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { Course } from '@/types/api'
+
+const COURSE_PRICE_UAH = 1000
 
 type CourseAuthStatus = 'idle' | 'authenticated' | 'unauthenticated'
 
@@ -85,15 +87,15 @@ export function CourseHeader({
             </div>
           ) : (
             <p className="text-sm leading-6 text-slate-400">
-              Перегляньте програму курсу та запишіться, щоб відстежувати
-              прогрес навчання.
+              Перегляньте програму курсу. Доступ до уроків, питань і прогресу
+              відкривається вручну після покупки.
             </p>
           )}
 
           {isEnrolled ? (
             <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-200">
               <CheckCircle className="size-4" aria-hidden="true" />
-              Ви вже записані на цей курс
+              Доступ до курсу відкрито
             </div>
           ) : (
             <Button
@@ -110,10 +112,19 @@ export function CourseHeader({
               ) : isAuthResolving ? (
                 'Перевіряємо вхід...'
               ) : (
-                'Записатися на курс'
+                <>
+                  <Lock className="size-4" aria-hidden="true" />
+                  Купити
+                </>
               )}
             </Button>
           )}
+
+          {!isEnrolled ? (
+            <p className="text-sm font-semibold text-cyan-200">
+              Вартість: {COURSE_PRICE_UAH} грн
+            </p>
+          ) : null}
 
           {enrollmentError ? (
             <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">

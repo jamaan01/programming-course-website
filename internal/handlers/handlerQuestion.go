@@ -252,7 +252,7 @@ func (h *QuestionHandler) GetStudentQuestionsByLessonID(c *gin.Context) {
 		return
 	}
 
-	questions, err := h.service.GetStudentQuestionsByLessonID(c.Request.Context(), userID, lessonID)
+	questions, err := h.service.GetStudentQuestionsByLessonID(c.Request.Context(), userID, lessonID, getAuthenticatedUserRole(c))
 	if err != nil {
 		if errors.Is(err, questionCore.ErrInvalidID) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "РќРµРїСЂР°РІРёР»СЊРЅРёР№ С„РѕСЂРјР°С‚ ID"})
@@ -293,7 +293,7 @@ func (h *QuestionHandler) SubmitAnswer(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.SubmitAnswer(c.Request.Context(), userID, questionID, req)
+	result, err := h.service.SubmitAnswer(c.Request.Context(), userID, questionID, req, getAuthenticatedUserRole(c))
 	if err != nil {
 		if errors.Is(err, questionCore.ErrInvalidID) || errors.Is(err, questionCore.ErrInvalidAnswer) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "РќРµРєРѕСЂРµРєС‚РЅС– РґР°РЅС– РІС–РґРїРѕРІС–РґС–"})

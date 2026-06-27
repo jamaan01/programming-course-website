@@ -25,8 +25,8 @@ type QuestionService interface {
 	CreateQuestionOption(ctx context.Context, questionID int, req CreateQuestionOptionRequest) (Option, error)
 	DeleteQuestionOption(ctx context.Context, optionID int) error
 	UpdateQuestionCorrectOption(ctx context.Context, questionID int, req UpdateQuestionCorrectOptionRequest) error
-	GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error)
-	SubmitAnswer(ctx context.Context, userID int, questionID int, req SubmitAnswerRequest) (SubmitAnswerResponse, error)
+	GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int, userRole string) (LessonQuestionsResponse, error)
+	SubmitAnswer(ctx context.Context, userID int, questionID int, req SubmitAnswerRequest, userRole string) (SubmitAnswerResponse, error)
 }
 
 type Service struct {
@@ -126,19 +126,19 @@ func (s *Service) UpdateQuestionCorrectOption(ctx context.Context, questionID in
 	return s.repo.UpdateQuestionCorrectOption(ctx, questionID, req.OptionID)
 }
 
-func (s *Service) GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int) (LessonQuestionsResponse, error) {
+func (s *Service) GetStudentQuestionsByLessonID(ctx context.Context, userID int, lessonID int, userRole string) (LessonQuestionsResponse, error) {
 	if userID <= 0 || lessonID <= 0 {
 		return LessonQuestionsResponse{}, ErrInvalidID
 	}
 
-	if err := s.repo.CheckStudentLessonAccess(ctx, userID, lessonID); err != nil {
+	if err := s.repo.CheckStudentLessonAccess(ctx, userID, lessonID, userRole); err != nil {
 		return LessonQuestionsResponse{}, err
 	}
 
 	return s.repo.GetStudentQuestionsByLessonID(ctx, userID, lessonID)
 }
 
-func (s *Service) SubmitAnswer(ctx context.Context, userID int, questionID int, req SubmitAnswerRequest) (SubmitAnswerResponse, error) {
+func (s *Service) SubmitAnswer(ctx context.Context, userID int, questionID int, req SubmitAnswerRequest, userRole string) (SubmitAnswerResponse, error) {
 	if userID <= 0 || questionID <= 0 {
 		return SubmitAnswerResponse{}, ErrInvalidID
 	}
@@ -151,7 +151,7 @@ func (s *Service) SubmitAnswer(ctx context.Context, userID int, questionID int, 
 		return SubmitAnswerResponse{}, err
 	}
 
-	if err := s.repo.CheckStudentQuestionAccess(ctx, userID, questionID); err != nil {
+	if err := s.repo.CheckStudentQuestionAccess(ctx, userID, questionID, userRole); err != nil {
 		return SubmitAnswerResponse{}, err
 	}
 

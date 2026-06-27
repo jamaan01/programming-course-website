@@ -121,6 +121,26 @@ func (h *CourseHandler) GetMyCourse(c *gin.Context) {
 	c.JSON(http.StatusOK, courses)
 }
 
+func (h *CourseHandler) GetCourseAccess(c *gin.Context) {
+	courseID, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := getAuthenticatedUserID(c)
+	if !ok {
+		return
+	}
+
+	access, err := h.service.GetCourseAccess(c.Request.Context(), userID, courseID, getAuthenticatedUserRole(c))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося перевірити доступ до курсу"})
+		return
+	}
+
+	c.JSON(http.StatusOK, access)
+}
+
 func (h *CourseHandler) GetAllCoursesAdmin(c *gin.Context) {
 	courses, err := h.service.GetAllCoursesAdmin(c.Request.Context())
 	if err != nil {
@@ -159,6 +179,77 @@ func (h *CourseHandler) GetCourseSyllabusAdmin(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, syllabus)
+}
+
+func (h *CourseHandler) GetCourseAccessListAdmin(c *gin.Context) {
+	accessList, err := h.service.GetCourseAccessList(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося отримати список доступів"})
+		return
+	}
+
+	c.JSON(http.StatusOK, accessList)
+}
+
+func (h *CourseHandler) GrantCourseAccessAdmin(c *gin.Context) {
+	adminID, ok := getAuthenticatedUserID(c)
+	if !ok {
+		return
+	}
+
+	var req courseCore.GrantCourseAccessRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний формат даних", "details": err.Error()})
+		return
+	}
+
+	access, err := h.service.GrantCourseAccess(c.Request.Context(), req, adminID)
+	if err != nil {
+		if errors.Is(err, courseCore.ErrInvalidAccessGrant) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Оберіть користувача та курс"})
+			return
+		}
+
+		if errors.Is(err, courseCore.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Користувача не знайдено"})
+			return
+		}
+
+		if errors.Is(err, courseCore.ErrCourseNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Курс не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося видати доступ"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, access)
+}
+
+func (h *CourseHandler) RevokeCourseAccessAdmin(c *gin.Context) {
+	accessID, ok := getIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	err := h.service.RevokeCourseAccess(c.Request.Context(), accessID)
+	if err != nil {
+		if errors.Is(err, courseCore.ErrInvalidAccessGrant) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Невірний ID доступу"})
+			return
+		}
+
+		if errors.Is(err, courseCore.ErrCourseAccessNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Доступ не знайдено"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не вдалося відкликати доступ"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Доступ відкликано"})
 }
 
 func (h *CourseHandler) UpdateCoursePublishStatus(c *gin.Context) {
@@ -368,4 +459,34 @@ func getIDParam(c *gin.Context, name string) (int, bool) {
 	}
 
 	return id, true
+}
+
+func getAuthenticatedUserID(c *gin.Context) (int, bool) {
+	userIDcontext, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Не авторизовано"})
+		return 0, false
+	}
+
+	userID, ok := userIDcontext.(int)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Помилка сервера: невірний тип ID"})
+		return 0, false
+	}
+
+	return userID, true
+}
+
+func getAuthenticatedUserRole(c *gin.Context) string {
+	userRoleContext, exists := c.Get("userRole")
+	if !exists {
+		return "user"
+	}
+
+	userRole, ok := userRoleContext.(string)
+	if !ok || userRole == "" {
+		return "user"
+	}
+
+	return userRole
 }

@@ -14,10 +14,10 @@ var ErrQuizNotComplete = errors.New("lesson quiz not complete")
 
 type LessonRepository interface {
 	GetLessonByID(ctx context.Context, id int) (Lesson, error)
-	CheckAccess(ctx context.Context, userID int, lessonID int) error
+	CheckAccess(ctx context.Context, userID int, lessonID int, userRole string) error
 	AreAllLessonQuestionsCorrect(ctx context.Context, userID int, lessonID int) (bool, error)
 	UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error
-	GetCompletedLesson(ctx context.Context, userID int, courseID int) ([]int, error)
+	GetCompletedLesson(ctx context.Context, userID int, courseID int, userRole string) ([]int, error)
 }
 
 type Repository struct {
@@ -41,7 +41,11 @@ func (r *Repository) GetLessonByID(ctx context.Context, id int) (Lesson, error) 
 	return l, nil
 }
 
-func (r *Repository) CheckAccess(ctx context.Context, userID int, lessonID int) error {
+func (r *Repository) CheckAccess(ctx context.Context, userID int, lessonID int, userRole string) error {
+	if userRole == "admin" {
+		return nil
+	}
+
 	var hasAccess bool
 
 	query := `
@@ -49,8 +53,12 @@ func (r *Repository) CheckAccess(ctx context.Context, userID int, lessonID int) 
 	SELECT 1
 	FROM lessons l
 	JOIN modules m ON l.module_id = m.id
-	JOIN enrollments e ON m.course_id = e.course_id
-	WHERE l.id = $1 AND e.user_id = $2
+	JOIN courses c ON m.course_id = c.id
+	JOIN course_access ca ON m.course_id = ca.course_id
+	WHERE l.id = $1
+		AND ca.user_id = $2
+		AND ca.is_active = true
+		AND c.is_published = true
 	)
 	`
 
@@ -67,24 +75,32 @@ func (r *Repository) CheckAccess(ctx context.Context, userID int, lessonID int) 
 	return nil
 }
 
-func (r *Repository) checkCourseEnrollment(ctx context.Context, userID int, courseID int) error {
-	var isEnrolled bool
+func (r *Repository) checkCourseAccess(ctx context.Context, userID int, courseID int, userRole string) error {
+	if userRole == "admin" {
+		return nil
+	}
+
+	var hasAccess bool
 
 	query := `
 	SELECT EXISTS (
 		SELECT 1
-		FROM enrollments
-		WHERE user_id = $1 AND course_id = $2
+		FROM course_access ca
+		JOIN courses c ON c.id = ca.course_id
+		WHERE ca.user_id = $1
+			AND ca.course_id = $2
+			AND ca.is_active = true
+			AND c.is_published = true
 	)
 	`
 
-	err := r.db.QueryRow(ctx, query, userID, courseID).Scan(&isEnrolled)
+	err := r.db.QueryRow(ctx, query, userID, courseID).Scan(&hasAccess)
 	if err != nil {
-		slog.Error("Check course enrollment error", "error", err)
+		slog.Error("Check course access error", "error", err)
 		return fmt.Errorf("помилка бази даних при перевірці запису на курс: %w", err)
 	}
 
-	if !isEnrolled {
+	if !hasAccess {
 		return fmt.Errorf("%w: доступ заборонено: ви не придбали цей курс", ErrAccessDenied)
 	}
 
@@ -139,8 +155,8 @@ func (r *Repository) UpdateLessonProgress(ctx context.Context, userID int, lesso
 	return nil
 }
 
-func (r *Repository) GetCompletedLesson(ctx context.Context, userID int, courseID int) ([]int, error) {
-	if err := r.checkCourseEnrollment(ctx, userID, courseID); err != nil {
+func (r *Repository) GetCompletedLesson(ctx context.Context, userID int, courseID int, userRole string) ([]int, error) {
+	if err := r.checkCourseAccess(ctx, userID, courseID, userRole); err != nil {
 		return nil, err
 	}
 

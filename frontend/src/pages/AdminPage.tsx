@@ -5,6 +5,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  ShieldCheck,
   Trash2,
   X,
 } from 'lucide-react'
@@ -32,9 +33,13 @@ import {
   createAdminModule,
   createAdminQuestionOption,
   deleteAdminQuestionOption,
+  getAdminCourseAccess,
   getAdminCourseSyllabus,
   getAdminCourses,
   getAdminLessonQuestions,
+  getAdminUsers,
+  grantAdminCourseAccess,
+  revokeAdminCourseAccess,
   updateAdminCourse,
   updateAdminCoursePublishStatus,
   updateAdminLesson,
@@ -44,8 +49,10 @@ import {
   updateAdminQuestionOption,
 } from '@/services/adminService'
 import type {
+  AdminCourseAccess,
   AdminQuestion,
   AdminQuestionOption,
+  AdminUser,
   Course,
   CourseLesson,
   CourseModule,
@@ -825,6 +832,16 @@ export function AdminPage() {
   const [questions, setQuestions] = useState<AdminQuestion[]>([])
   const [isQuestionsLoading, setIsQuestionsLoading] = useState(false)
   const [questionsError, setQuestionsError] = useState<string | null>(null)
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [courseAccessList, setCourseAccessList] = useState<
+    AdminCourseAccess[]
+  >([])
+  const [isAccessLoading, setIsAccessLoading] = useState(true)
+  const [accessUserEmail, setAccessUserEmail] = useState('')
+  const [accessCourseId, setAccessCourseId] = useState('')
+  const [accessActionIds, setAccessActionIds] = useState<Set<number>>(
+    () => new Set(),
+  )
 
   const [courseSuccess, setCourseSuccess] = useState<string | null>(null)
   const [courseError, setCourseError] = useState<string | null>(null)
@@ -834,6 +851,8 @@ export function AdminPage() {
   const [lessonError, setLessonError] = useState<string | null>(null)
   const [questionSuccess, setQuestionSuccess] = useState<string | null>(null)
   const [questionError, setQuestionError] = useState<string | null>(null)
+  const [accessSuccess, setAccessSuccess] = useState<string | null>(null)
+  const [accessError, setAccessError] = useState<string | null>(null)
   const [newOptionTexts, setNewOptionTexts] = useState<Record<number, string>>({})
   const [optionActionIds, setOptionActionIds] = useState<Set<string>>(
     () => new Set(),
@@ -922,6 +941,32 @@ export function AdminPage() {
     }
   }, [])
 
+  const loadAccessData = useCallback(async () => {
+    setIsAccessLoading(true)
+    setAccessError(null)
+
+    try {
+      const [users, accessList] = await Promise.all([
+        getAdminUsers(),
+        getAdminCourseAccess(),
+      ])
+
+      setAdminUsers(users)
+      setCourseAccessList(accessList)
+    } catch (error) {
+      setAdminUsers([])
+      setCourseAccessList([])
+      setAccessError(
+        getAdminErrorMessage(
+          error,
+          'Не вдалося завантажити дані доступів.',
+        ),
+      )
+    } finally {
+      setIsAccessLoading(false)
+    }
+  }, [])
+
   const loadSyllabus = useCallback(async (courseId: number) => {
     setIsSyllabusLoading(true)
     setSyllabusError(null)
@@ -974,6 +1019,10 @@ export function AdminPage() {
   useEffect(() => {
     void Promise.resolve().then(() => loadCourses())
   }, [loadCourses])
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadAccessData())
+  }, [loadAccessData])
 
   useEffect(() => {
     if (!selectedCourseId) {
@@ -1140,6 +1189,56 @@ export function AdminPage() {
     replace(nextOptions)
     setQuestionError(null)
     void questionForm.trigger('options')
+  }
+
+  async function handleGrantCourseAccess() {
+    const userEmail = accessUserEmail.trim()
+    const courseId = parseSelectNumber(accessCourseId)
+
+    setAccessSuccess(null)
+    setAccessError(null)
+
+    if (!userEmail || !courseId) {
+      setAccessError('Оберіть користувача та курс.')
+      return
+    }
+
+    try {
+      await grantAdminCourseAccess({
+        user_email: userEmail,
+        course_id: courseId,
+      })
+      setAccessSuccess('Доступ до курсу відкрито.')
+      setAccessUserEmail('')
+      setAccessCourseId('')
+      await loadAccessData()
+    } catch (error) {
+      setAccessError(
+        getAdminErrorMessage(error, 'Не вдалося відкрити доступ до курсу.'),
+      )
+    }
+  }
+
+  async function handleRevokeCourseAccess(accessId: number) {
+    setAccessSuccess(null)
+    setAccessError(null)
+    setAccessActionIds((current) => new Set(current).add(accessId))
+
+    try {
+      await revokeAdminCourseAccess(accessId)
+      setAccessSuccess('Доступ відкликано.')
+      await loadAccessData()
+    } catch (error) {
+      setAccessError(
+        getAdminErrorMessage(error, 'Не вдалося відкликати доступ.'),
+      )
+    } finally {
+      setAccessActionIds((current) => {
+        const next = new Set(current)
+        next.delete(accessId)
+        return next
+      })
+    }
   }
 
   function closeEditModal() {
@@ -1621,6 +1720,165 @@ export function AdminPage() {
             API-методи адмін-частини.
           </p>
         </section>
+
+        <Card className="border border-slate-800 bg-slate-900 text-slate-100">
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-cyan-300">
+                  Доступи
+                </p>
+                <CardTitle className="flex items-center gap-2 text-xl text-slate-100">
+                  <ShieldCheck className="size-5 text-cyan-300" aria-hidden="true" />
+                  Ручний доступ до курсів
+                </CardTitle>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                onClick={loadAccessData}
+                disabled={isAccessLoading}
+              >
+                <RefreshCw className="size-4" aria-hidden="true" />
+                Оновити
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="access-user-email" className="text-slate-200">
+                  Email користувача
+                </Label>
+                <Input
+                  id="access-user-email"
+                  className={controlClass}
+                  list="admin-users-list"
+                  value={accessUserEmail}
+                  onChange={(event) => setAccessUserEmail(event.target.value)}
+                  placeholder="student@example.com"
+                  disabled={isAccessLoading}
+                />
+                <datalist id="admin-users-list">
+                  {adminUsers.map((user) => (
+                    <option
+                      key={user.id}
+                      value={user.email}
+                      label={`${user.name} (${user.role})`}
+                    />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="access-course-id" className="text-slate-200">
+                  Курс
+                </Label>
+                <select
+                  id="access-course-id"
+                  className={selectClass}
+                  value={accessCourseId}
+                  onChange={(event) => setAccessCourseId(event.target.value)}
+                  disabled={isAccessLoading || !hasCourses}
+                >
+                  <option value="">Оберіть курс</option>
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button
+                type="button"
+                className="bg-sky-500 text-slate-950 hover:bg-sky-400"
+                onClick={handleGrantCourseAccess}
+                disabled={
+                  isAccessLoading ||
+                  !accessUserEmail.trim() ||
+                  !accessCourseId
+                }
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                Відкрити доступ
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <FeedbackMessage message={accessSuccess} />
+              <FeedbackMessage message={accessError} tone="error" />
+            </div>
+
+            {isAccessLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-14 w-full bg-slate-800" />
+                <Skeleton className="h-14 w-full bg-slate-800" />
+              </div>
+            ) : null}
+
+            {!isAccessLoading && courseAccessList.length === 0 ? (
+              <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-sm text-slate-400">
+                Доступи ще не видавалися.
+              </div>
+            ) : null}
+
+            {!isAccessLoading && courseAccessList.length > 0 ? (
+              <div className="space-y-2">
+                {courseAccessList.map((access) => (
+                  <div
+                    key={access.id}
+                    className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="break-all text-sm font-medium text-slate-100">
+                          {access.user_email}
+                        </p>
+                        <Badge
+                          className={
+                            access.is_active
+                              ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                              : 'border border-slate-700 bg-slate-800 text-slate-300'
+                          }
+                        >
+                          {access.is_active ? 'Активний' : 'Відкликано'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-slate-400">
+                        {access.user_name} · {access.course_title}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Видано: {new Date(access.granted_at).toLocaleString()}
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-slate-100"
+                      disabled={
+                        !access.is_active || accessActionIds.has(access.id)
+                      }
+                      onClick={() => handleRevokeCourseAccess(access.id)}
+                    >
+                      {accessActionIds.has(access.id) ? (
+                        <Loader2
+                          className="size-4 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <X className="size-4" aria-hidden="true" />
+                      )}
+                      Відкликати
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
           <Card className="border border-slate-800 bg-slate-900 text-slate-100">

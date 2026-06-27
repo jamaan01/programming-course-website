@@ -109,25 +109,56 @@ function CoursesEmptyState() {
 
 function HomeReleaseCard() {
   return (
-    <aside className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-sky-950/20 xl:sticky xl:top-8">
-      <div className="mb-4 h-1 w-16 rounded-full bg-cyan-400" />
-      <p className="text-sm font-medium text-cyan-300">Оновлення</p>
+    <aside className="space-y-5 xl:sticky xl:top-8">
+      <article className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-sky-950/20">
+        <div className="mb-4 h-1 w-16 rounded-full bg-cyan-400" />
+        <p className="text-sm font-medium text-cyan-300">Оновлення</p>
 
-      <h2 className="mt-3 text-xl font-semibold leading-tight text-slate-100">
-        Версія 1.0
-      </h2>
-      <p className="mt-1 text-sm font-medium text-slate-200">
-        Перший запуск GoLab
-      </p>
-      <p className="mt-4 text-sm leading-7 text-slate-300">
-        Ми раді оголосити про запуск передової платформи для освоєння мови Go.
-        Наш продукт встановлює нову планку на освітньому ринку. Ми запакували
-        глибоку експертизу в кристально зрозумілі уроки, впровадили розумну
-        систему відстеження прогресу та створили потужний модуль перевірки
-        знань, що симулює реальні робочі завдання. Це найкоротший,
-        ефективніший і якісніший шлях від новачка до затребуваного інженера з
-        високим доходом. Приєднуйтесь до лідерів!
-      </p>
+        <h2 className="mt-3 text-xl font-semibold leading-tight text-slate-100">
+          Версія 1.0
+        </h2>
+        <p className="mt-1 text-sm font-medium text-slate-200">
+          Перший запуск GoLab
+        </p>
+        <p className="mt-4 text-sm leading-7 text-slate-300">
+          Ми раді оголосити про запуск передової платформи для освоєння мови Go.
+          Наш продукт встановлює нову планку на освітньому ринку. Ми запакували
+          глибоку експертизу в кристально зрозумілі уроки, впровадили розумну
+          систему відстеження прогресу та створили потужний модуль перевірки
+          знань, що симулює реальні робочі завдання. Це найкоротший,
+          ефективніший і якісніший шлях від новачка до затребуваного інженера з
+          високим доходом. Приєднуйтесь до лідерів!
+        </p>
+      </article>
+
+      <article className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-sky-950/20">
+        <div className="mb-4 h-1 w-16 rounded-full bg-sky-400" />
+        <p className="text-sm font-medium text-cyan-300">Оновлення</p>
+
+        <h2 className="mt-3 text-xl font-semibold leading-tight text-slate-100">
+          Версія 1.1
+        </h2>
+        <p className="mt-1 text-sm font-medium text-slate-200">
+          Покращення інтерфейсу
+        </p>
+        <div className="mt-4 space-y-4 text-sm leading-7 text-slate-300">
+          <p>
+            Ми оновили кілька важливих деталей платформи, щоб користуватися
+            GoLab було зручніше. Покращили відображення закритого доступу до
+            курсів, додали окрему сторінку з інструкцією покупки та зробили
+            шлях до навчання зрозумілішим для нових користувачів.
+          </p>
+          <p>
+            Також оновили елементи інтерфейсу, додали підтримку таблиць у
+            навчальних матеріалах і підготували платформу до наступних
+            можливостей, які з’являться в майбутніх версіях.
+          </p>
+          <p>
+            GoLab поступово стає зручнішим, зрозумілішим і ближчим до
+            повноцінної платформи для навчання та практики.
+          </p>
+        </div>
+      </article>
     </aside>
   )
 }

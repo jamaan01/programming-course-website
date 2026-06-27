@@ -6,9 +6,9 @@ import (
 )
 
 type LessonService interface {
-	GetLessonByID(ctx context.Context, lessonID int, userID int) (Lesson, error)
-	UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error
-	GetCompleteLesson(ctx context.Context, userID int, courseID int) ([]int, error)
+	GetLessonByID(ctx context.Context, lessonID int, userID int, userRole string) (Lesson, error)
+	UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool, userRole string) error
+	GetCompleteLesson(ctx context.Context, userID int, courseID int, userRole string) ([]int, error)
 }
 
 type Service struct {
@@ -19,8 +19,8 @@ func NewService(repo LessonRepository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) GetLessonByID(ctx context.Context, lessonID int, userID int) (Lesson, error) {
-	err := s.repo.CheckAccess(ctx, userID, lessonID)
+func (s *Service) GetLessonByID(ctx context.Context, lessonID int, userID int, userRole string) (Lesson, error) {
+	err := s.repo.CheckAccess(ctx, userID, lessonID, userRole)
 	if err != nil {
 		slog.Error("Check access error", "error", err)
 		return Lesson{}, err
@@ -29,8 +29,8 @@ func (s *Service) GetLessonByID(ctx context.Context, lessonID int, userID int) (
 	return s.repo.GetLessonByID(ctx, lessonID)
 }
 
-func (s *Service) UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool) error {
-	err := s.repo.CheckAccess(ctx, userID, lessonID)
+func (s *Service) UpdateLessonProgress(ctx context.Context, userID int, lessonID int, isCompleted bool, userRole string) error {
+	err := s.repo.CheckAccess(ctx, userID, lessonID, userRole)
 	if err != nil {
 		slog.Error("Check access error", "error", err)
 		return err
@@ -50,6 +50,6 @@ func (s *Service) UpdateLessonProgress(ctx context.Context, userID int, lessonID
 	return s.repo.UpdateLessonProgress(ctx, userID, lessonID, isCompleted)
 }
 
-func (s *Service) GetCompleteLesson(ctx context.Context, userID int, courseID int) ([]int, error) {
-	return s.repo.GetCompletedLesson(ctx, userID, courseID)
+func (s *Service) GetCompleteLesson(ctx context.Context, userID int, courseID int, userRole string) ([]int, error) {
+	return s.repo.GetCompletedLesson(ctx, userID, courseID, userRole)
 }

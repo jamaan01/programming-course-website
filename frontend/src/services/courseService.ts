@@ -1,6 +1,7 @@
 import { apiClient } from '@/services/apiClient'
 import type {
   Course,
+  CourseAccessResponse,
   CourseProgressResponse,
   MessageResponse,
 } from '@/types/api'
@@ -40,6 +41,16 @@ export async function getCourseProgress(
 ): Promise<CourseProgressResponse> {
   const { data } = await apiClient.get<CourseProgressResponse>(
     `/api/courses/${courseId}/progress`,
+  )
+
+  return data
+}
+
+export async function getCourseAccess(
+  courseId: number,
+): Promise<CourseAccessResponse> {
+  const { data } = await apiClient.get<CourseAccessResponse>(
+    `/api/courses/${courseId}/access`,
   )
 
   return data

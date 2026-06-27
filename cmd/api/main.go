@@ -59,6 +59,7 @@ func main() {
 		apiGroup.GET("/lessons/:id", lessonHandler.GetLessonByID)
 		apiGroup.POST("/courses/:id/enroll", courseHandler.EnrollUser)
 		apiGroup.GET("/profile/courses", courseHandler.GetMyCourse)
+		apiGroup.GET("/courses/:id/access", courseHandler.GetCourseAccess)
 		apiGroup.POST("/lessons/:id/complete", lessonHandler.CompleteLesson)
 		apiGroup.GET("/courses/:id/progress", lessonHandler.GetLessonProgress)
 		apiGroup.GET("/lessons/:id/questions", questionHandler.GetStudentQuestionsByLessonID)
@@ -67,6 +68,10 @@ func main() {
 		adminGroup := apiGroup.Group("/admin")
 		adminGroup.Use(middlewear.AdminMiddle())
 		{
+			adminGroup.GET("/users", userHandler.GetAllUsersAdmin)
+			adminGroup.GET("/course-access", courseHandler.GetCourseAccessListAdmin)
+			adminGroup.POST("/course-access", courseHandler.GrantCourseAccessAdmin)
+			adminGroup.PATCH("/course-access/:id/revoke", courseHandler.RevokeCourseAccessAdmin)
 			adminGroup.GET("/courses", courseHandler.GetAllCoursesAdmin)
 			adminGroup.POST("/courses", courseHandler.CreateCourse)
 			adminGroup.GET("/courses/:id", courseHandler.GetCourseByIDAdmin)
