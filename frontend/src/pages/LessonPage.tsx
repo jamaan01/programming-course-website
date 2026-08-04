@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle, Loader2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Code2, Loader2, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getCourseProgress, getCourseSyllabus } from '@/services/courseService'
 import { completeLesson, getLessonById } from '@/services/lessonService'
+import { getLessonPracticeSummary } from '@/services/practiceService'
 import type {
   Course,
   CourseLesson,
@@ -22,6 +23,7 @@ import type {
   CourseProgressResponse,
   Lesson,
   NormalizedApiError,
+  PracticeSummary,
 } from '@/types/api'
 
 const lessonLoadErrorMessage =
@@ -167,6 +169,49 @@ function LessonSidebarSkeleton() {
   )
 }
 
+interface LessonPracticeLinkProps {
+  courseId: number
+  lessonId: number
+  isLoading: boolean
+}
+
+function LessonPracticeLink({
+  courseId,
+  lessonId,
+  isLoading,
+}: LessonPracticeLinkProps) {
+  return (
+    <section className="rounded-xl border border-slate-800 bg-slate-900/70 px-5 py-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/25 bg-cyan-400/10 text-cyan-200">
+            <Code2 className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 space-y-1">
+            <p className="text-base font-semibold text-slate-100">Практика</p>
+            <p className="text-sm leading-6 text-slate-400">
+              Закріпіть матеріал у практичному завданні.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to={`/courses/${courseId}/lessons/${lessonId}/practice`}
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 transition-colors hover:bg-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          aria-disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Code2 className="size-4" aria-hidden="true" />
+          )}
+          Практика
+        </Link>
+      </div>
+    </section>
+  )
+}
+
 interface LessonCompletionControlProps {
   isCompleted: boolean
   isCompleting: boolean
@@ -236,6 +281,10 @@ export function LessonPage() {
   const [progressError, setProgressError] = useState<string | null>(null)
   const [completeError, setCompleteError] = useState<string | null>(null)
   const [isNotEnrolled, setIsNotEnrolled] = useState(false)
+  const [practiceSummary, setPracticeSummary] =
+    useState<PracticeSummary | null>(null)
+  const [isPracticeSummaryLoading, setIsPracticeSummaryLoading] =
+    useState(false)
   const [lessonQuestionsStatus, setLessonQuestionsStatus] =
     useState<LessonQuestionsStatus>({
       hasQuestions: false,
@@ -491,6 +540,7 @@ export function LessonPage() {
         setLesson(null)
         setLessonError(null)
         setCompleteError(null)
+        setPracticeSummary(null)
         setLessonQuestionsStatus({
           hasQuestions: false,
           allQuestionsCorrect: true,
@@ -530,6 +580,59 @@ export function LessonPage() {
       isMounted = false
     }
   }, [parsedLessonId])
+
+  useEffect(() => {
+    if (
+      !parsedLessonId ||
+      isNotEnrolled ||
+      isLessonLoading ||
+      isProgressLoading ||
+      lessonError ||
+      !lesson
+    ) {
+      void Promise.resolve().then(() => {
+        setPracticeSummary(null)
+        setIsPracticeSummaryLoading(false)
+      })
+      return
+    }
+
+    let isMounted = true
+
+    void Promise.resolve()
+      .then(() => {
+        setIsPracticeSummaryLoading(true)
+        return getLessonPracticeSummary(parsedLessonId)
+      })
+      .then((summary) => {
+        if (!isMounted) {
+          return
+        }
+
+        setPracticeSummary(summary)
+      })
+      .catch(() => {
+        if (isMounted) {
+          setPracticeSummary(null)
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsPracticeSummaryLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [
+    isLessonLoading,
+    isNotEnrolled,
+    isProgressLoading,
+    lesson,
+    lessonError,
+    parsedLessonId,
+  ])
 
   async function handleCompleteLesson() {
     if (!parsedLessonId) {
@@ -647,6 +750,14 @@ export function LessonPage() {
                     }
                     onComplete={handleCompleteLesson}
                   />
+
+                  {practiceSummary && practiceSummary.activeTaskCount > 0 ? (
+                    <LessonPracticeLink
+                      courseId={parsedCourseId}
+                      lessonId={parsedLessonId}
+                      isLoading={isPracticeSummaryLoading}
+                    />
+                  ) : null}
 
                   {completeError ? (
                     <LessonErrorState message={completeError} />

@@ -8,9 +8,11 @@ import { AdminPage } from '@/pages/AdminPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { CoursePurchasePage } from '@/pages/CoursePurchasePage'
 import { HomePage } from '@/pages/HomePage'
+import { LessonPracticePage } from '@/pages/LessonPracticePage'
 import { LessonPage } from '@/pages/LessonPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PrivacyPage } from '@/pages/PrivacyPage'
+import PlaygroundPage from '@/pages/PlaygroundPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { TermsPage } from '@/pages/TermsPage'
@@ -50,10 +52,22 @@ export const router = createBrowserRouter([
         element: <CoursePurchasePage />,
       },
       {
+        path: '/playground',
+        element: <PlaygroundPage />,
+      },
+      {
         path: '/courses/:courseId/lessons/:lessonId',
         element: (
           <ProtectedRoute>
             <LessonPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/courses/:courseId/lessons/:lessonId/practice',
+        element: (
+          <ProtectedRoute>
+            <LessonPracticePage />
           </ProtectedRoute>
         ),
       },

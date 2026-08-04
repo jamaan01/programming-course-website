@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
+import { PracticeTasksAdminSection } from '@/components/admin/PracticeTasksAdminSection'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -2960,6 +2961,13 @@ export function AdminPage() {
             </CardContent>
           </Card>
         </section>
+
+        <PracticeTasksAdminSection
+          modules={modules}
+          isSyllabusLoading={isSyllabusLoading}
+          hasModules={hasModules}
+          isDisabled={isDependentSelectDisabled}
+        />
       </div>
       <EditContentModal
         target={editTarget}

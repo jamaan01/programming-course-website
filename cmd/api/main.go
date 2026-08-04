@@ -10,6 +10,7 @@ import (
 	"github.com/jamaan01/kursovaia/internal/handlers"
 	"github.com/jamaan01/kursovaia/internal/lessonCore"
 	"github.com/jamaan01/kursovaia/internal/middlewear"
+	"github.com/jamaan01/kursovaia/internal/practiceCore"
 	"github.com/jamaan01/kursovaia/internal/questionCore"
 	"github.com/jamaan01/kursovaia/internal/userCore"
 )
@@ -32,6 +33,10 @@ func main() {
 	questionRepo := questionCore.NewRepository(db.Pool)
 	questionService := questionCore.NewService(questionRepo)
 	questionHandler := handlers.NewQuestionHandler(questionService)
+
+	practiceRepo := practiceCore.NewRepository(db.Pool)
+	practiceService := practiceCore.NewService(practiceRepo)
+	practiceHandler := handlers.NewPracticeHandler(practiceService)
 
 	r := gin.Default()
 
@@ -64,6 +69,9 @@ func main() {
 		apiGroup.GET("/courses/:id/progress", lessonHandler.GetLessonProgress)
 		apiGroup.GET("/lessons/:id/questions", questionHandler.GetStudentQuestionsByLessonID)
 		apiGroup.POST("/questions/:id/answer", questionHandler.SubmitAnswer)
+		apiGroup.GET("/lessons/:id/practice/summary", practiceHandler.GetPracticeSummary)
+		apiGroup.GET("/lessons/:id/practice", practiceHandler.GetLessonPractice)
+		apiGroup.POST("/practice-tasks/:id/check", practiceHandler.CheckPracticeTask)
 
 		adminGroup := apiGroup.Group("/admin")
 		adminGroup.Use(middlewear.AdminMiddle())
@@ -89,6 +97,9 @@ func main() {
 			adminGroup.PATCH("/questions/:id/correct-option", questionHandler.UpdateQuestionCorrectOption)
 			adminGroup.PATCH("/question-options/:id", questionHandler.UpdateQuestionOption)
 			adminGroup.DELETE("/question-options/:id", questionHandler.DeleteQuestionOption)
+			adminGroup.GET("/lessons/:id/practice-tasks", practiceHandler.GetAdminPracticeTasks)
+			adminGroup.POST("/lessons/:id/practice-tasks", practiceHandler.CreatePracticeTask)
+			adminGroup.PATCH("/practice-tasks/:id", practiceHandler.UpdatePracticeTask)
 		}
 	}
 	port := os.Getenv("PORT")

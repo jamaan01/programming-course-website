@@ -103,6 +103,40 @@ export interface SubmitAnswerResponse {
   all_questions_correct: boolean
 }
 
+export interface PracticeSummary {
+  activeTaskCount: number
+  completedTaskCount: number
+  isCompleted: boolean
+}
+
+export interface PracticeTask {
+  id: number
+  lessonId: number
+  title: string
+  description: string
+  starterCode: string
+  orderNum: number
+  isCompleted: boolean
+}
+
+export interface LessonPracticeResponse extends PracticeSummary {
+  lessonId: number
+  tasks: PracticeTask[]
+  completedTaskIds: number[]
+}
+
+export interface PracticeCheckRequest {
+  output: string
+}
+
+export interface PracticeCheckResponse {
+  taskId: number
+  isCorrect: boolean
+  message: string
+  completedTaskIds: number[]
+  lessonPracticeCompleted: boolean
+}
+
 export interface CourseProgressResponse {
   completed_lesson_ids: number[]
 }
@@ -224,6 +258,19 @@ export interface AdminQuestionOption {
   order_num: number
 }
 
+export interface AdminPracticeTask {
+  id: number
+  lessonId: number
+  title: string
+  description: string
+  starterCode: string
+  expectedOutput: string
+  orderNum: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CreateQuestionRequest {
   question_text: string
   order_num: number
@@ -239,6 +286,24 @@ export interface CreateQuestionOptionRequest {
 export interface CreateQuestionResponse {
   message: string
   question_id: number
+}
+
+export interface CreatePracticeTaskPayload {
+  title: string
+  description: string
+  starterCode: string
+  expectedOutput: string
+  orderNum: number
+  isActive: boolean
+}
+
+export interface UpdatePracticeTaskPayload {
+  title?: string
+  description?: string
+  starterCode?: string
+  expectedOutput?: string
+  orderNum?: number
+  isActive?: boolean
 }
 
 export interface CompleteLessonRequest {

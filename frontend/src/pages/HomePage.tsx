@@ -159,6 +159,32 @@ function HomeReleaseCard() {
           </p>
         </div>
       </article>
+
+      <article className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-sky-950/20">
+        <div className="mb-4 h-1 w-16 rounded-full bg-cyan-400" />
+        <p className="text-sm font-medium text-cyan-300">Оновлення</p>
+
+        <h2 className="mt-3 text-xl font-semibold leading-tight text-slate-100">
+          Версія 2.0
+        </h2>
+        <p className="mt-1 text-sm font-medium text-slate-200">
+          Практика та Go-компілятор
+        </p>
+        <div className="mt-4 space-y-4 text-sm leading-7 text-slate-300">
+          <p>
+            Ми додали повноцінну систему практичних завдань до уроків. Тепер
+            після вивчення матеріалу можна перейти до практики, запустити
+            Go-код у вбудованому онлайн-компіляторі, вставити результат
+            виконання програми та одразу перевірити відповідь.
+          </p>
+          <p>
+            Прогрес практики зберігається, виконані завдання можна переглядати
+            повторно, а нові завдання відкриваються поступово. Це допомагає не
+            просто читати теорію, а одразу закріплювати знання на реальних
+            прикладах.
+          </p>
+        </div>
+      </article>
     </aside>
   )
 }

@@ -10,8 +10,10 @@ import type {
   AdminUpdateQuestionPayload,
   AdminQuestion,
   AdminQuestionOption,
+  AdminPracticeTask,
   AdminUser,
   Course,
+  CreatePracticeTaskPayload,
   CreateCourseRequest,
   CreateCourseResponse,
   CreateLessonRequest,
@@ -22,6 +24,7 @@ import type {
   CreateQuestionResponse,
   GrantCourseAccessRequest,
   MessageResponse,
+  UpdatePracticeTaskPayload,
   UpdateCoursePublishRequest,
   UpdateCoursePublishResponse,
 } from '@/types/api'
@@ -245,6 +248,40 @@ export async function getAdminLessonQuestions(
 ): Promise<AdminQuestion[]> {
   const { data } = await apiClient.get<AdminQuestion[]>(
     `/api/admin/lessons/${lessonId}/questions`,
+  )
+
+  return data
+}
+
+export async function getAdminLessonPracticeTasks(
+  lessonId: number,
+): Promise<AdminPracticeTask[]> {
+  const { data } = await apiClient.get<AdminPracticeTask[]>(
+    `/api/admin/lessons/${lessonId}/practice-tasks`,
+  )
+
+  return data
+}
+
+export async function createAdminLessonPracticeTask(
+  lessonId: number,
+  payload: CreatePracticeTaskPayload,
+): Promise<AdminPracticeTask> {
+  const { data } = await apiClient.post<AdminPracticeTask>(
+    `/api/admin/lessons/${lessonId}/practice-tasks`,
+    payload,
+  )
+
+  return data
+}
+
+export async function updateAdminPracticeTask(
+  taskId: number,
+  payload: UpdatePracticeTaskPayload,
+): Promise<AdminPracticeTask> {
+  const { data } = await apiClient.patch<AdminPracticeTask>(
+    `/api/admin/practice-tasks/${taskId}`,
+    payload,
   )
 
   return data
